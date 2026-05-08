@@ -1,0 +1,6 @@
+segment-anything
+torch
+torchvision
+opencv-python
+Pillow
+numpy

@@ -1,0 +1,420 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>holds editor</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #000;
+  color: #fff;
+  font: 14px "Courier New", monospace;
+}
+#bar {
+  padding: 8px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  border-bottom: 1px solid #333;
+}
+button {
+  font: 14px "Courier New", monospace;
+  background: #fff;
+  color: #000;
+  border: none;
+  padding: 4px 12px;
+  cursor: pointer;
+}
+#info {
+  margin-left: auto;
+  font-size: 12px;
+  color: #888;
+}
+canvas {
+  display: block;
+  cursor: crosshair;
+}
+</style>
+</head>
+<body>
+
+<div id="bar">
+  <button onclick="save()">export json</button>
+  <button onclick="deleteSelected()">delete hold</button>
+  <button id="drawBtn" onclick="toggleDraw()">new hold</button>
+  <span id="info">load wall.jpg + holds.json</span>
+</div>
+<canvas id="c"></canvas>
+
+<script>
+const canvas = document.getElementById("c")
+const ctx    = canvas.getContext("2d")
+const info   = document.getElementById("info")
+
+let img
+let holds     = []
+let selected  = null
+let dragVert  = null
+let dragOff   = { x: 0, y: 0 }
+let scale     = 1
+let pan       = { x: 0, y: 0 }
+let panning   = false
+let panStart  = { x: 0, y: 0 }
+let panOff    = { x: 0, y: 0 }
+let drawing   = false
+let drawPts   = []
+
+const VERT_R = 5
+
+Promise.all([
+  loadImage("wall.jpg"),
+  fetch("holds.json").then(r => r.json()),
+]).then(([image, data]) => {
+  img   = image
+  holds = data
+  resize()
+  draw()
+  info.textContent = holds.length + " holds"
+})
+
+function loadImage(src) {
+  return new Promise((res, rej) => {
+    const i = new Image()
+    i.onload = () => res(i)
+    i.onerror = rej
+    i.src = src
+  })
+}
+
+function resize() {
+  canvas.width  = window.innerWidth
+  canvas.height = window.innerHeight - 33
+  if (img) {
+    scale = Math.min(
+      canvas.width  / img.width,
+      canvas.height / img.height
+    )
+  }
+}
+
+window.onresize = () => { resize(); draw() }
+
+function toScreen(nx, ny) {
+  return {
+    x: nx * img.width  * scale + pan.x,
+    y: ny * img.height * scale + pan.y,
+  }
+}
+
+function toNorm(sx, sy) {
+  return {
+    x: (sx - pan.x) / (img.width  * scale),
+    y: (sy - pan.y) / (img.height * scale),
+  }
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+  if (img) {
+    ctx.drawImage(
+      img,
+      pan.x, pan.y,
+      img.width * scale,
+      img.height * scale
+    )
+  }
+
+  for (const h of holds) {
+    const pts  = h.polygon
+    const isSel = h.id === selected
+
+    ctx.beginPath()
+    for (let i = 0; i < pts.length; i++) {
+      const p = toScreen(pts[i][0], pts[i][1])
+      if (i === 0) { ctx.moveTo(p.x, p.y) }
+      else         { ctx.lineTo(p.x, p.y) }
+    }
+    ctx.closePath()
+
+    if (isSel) {
+      ctx.fillStyle   = "rgba(224,0,0,0.3)"
+      ctx.strokeStyle = "#e00"
+      ctx.lineWidth   = 2
+    } else {
+      ctx.fillStyle   = "rgba(255,255,255,0.1)"
+      ctx.strokeStyle = "rgba(255,255,255,0.5)"
+      ctx.lineWidth   = 1
+    }
+
+    ctx.fill()
+    ctx.stroke()
+
+    if (isSel) {
+      for (const pt of pts) {
+        const p = toScreen(pt[0], pt[1])
+        ctx.fillStyle = "#fff"
+        ctx.fillRect(
+          p.x - VERT_R,
+          p.y - VERT_R,
+          VERT_R * 2,
+          VERT_R * 2
+        )
+      }
+    }
+  }
+
+  if (drawPts.length > 0) {
+    ctx.beginPath()
+    for (let i = 0; i < drawPts.length; i++) {
+      const p = toScreen(drawPts[i][0], drawPts[i][1])
+      if (i === 0) { ctx.moveTo(p.x, p.y) }
+      else         { ctx.lineTo(p.x, p.y) }
+    }
+    ctx.strokeStyle = "#0f0"
+    ctx.lineWidth   = 2
+    ctx.stroke()
+
+    for (const pt of drawPts) {
+      const p = toScreen(pt[0], pt[1])
+      ctx.fillStyle = "#0f0"
+      ctx.fillRect(
+        p.x - VERT_R,
+        p.y - VERT_R,
+        VERT_R * 2,
+        VERT_R * 2
+      )
+    }
+  }
+}
+
+function hitVertex(mx, my) {
+  if (!selected) { return null }
+  const h = holds.find(h => h.id === selected)
+  if (!h) { return null }
+
+  for (let i = 0; i < h.polygon.length; i++) {
+    const p  = toScreen(h.polygon[i][0], h.polygon[i][1])
+    const dx = mx - p.x
+    const dy = my - p.y
+    if (dx * dx + dy * dy < (VERT_R + 4) ** 2) {
+      return { hold: h, idx: i }
+    }
+  }
+  return null
+}
+
+function polyArea(poly) {
+  let a = 0
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    a += poly[j][0] * poly[i][1]
+    a -= poly[i][0] * poly[j][1]
+  }
+  return Math.abs(a / 2)
+}
+
+function hitHold(mx, my) {
+  const pt = toNorm(mx, my)
+
+  let best     = null
+  let bestArea = Infinity
+
+  for (const h of holds) {
+    if (!pointInPolygon(pt.x, pt.y, h.polygon)) { continue }
+    const a = polyArea(h.polygon)
+    if (a < bestArea) {
+      bestArea = a
+      best     = h.id
+    }
+  }
+
+  return best
+}
+
+function pointInPolygon(x, y, poly) {
+  let inside = false
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const xi = poly[i][0], yi = poly[i][1]
+    const xj = poly[j][0], yj = poly[j][1]
+
+    const intersect =
+      (yi > y) !== (yj > y) &&
+      x < ((xj - xi) * (y - yi)) / (yj - yi) + xi
+
+    if (intersect) { inside = !inside }
+  }
+  return inside
+}
+
+canvas.onmousedown = (e) => {
+  const mx = e.offsetX
+  const my = e.offsetY
+
+  if (e.button === 1 || e.shiftKey) {
+    panning  = true
+    panStart = { x: mx, y: my }
+    panOff   = { x: pan.x, y: pan.y }
+    return
+  }
+
+  if (drawing) {
+    const pt = toNorm(mx, my)
+    drawPts.push([+pt.x.toFixed(4), +pt.y.toFixed(4)])
+    draw()
+    info.textContent = drawPts.length + " pts — enter to finish, esc to cancel"
+    return
+  }
+
+  const v = hitVertex(mx, my)
+  if (v) {
+    dragVert = v
+    return
+  }
+
+  const hid = hitHold(mx, my)
+  selected = hid
+  draw()
+  info.textContent = hid
+    ? "selected: " + hid
+    : holds.length + " holds"
+}
+
+canvas.onmousemove = (e) => {
+  const mx = e.offsetX
+  const my = e.offsetY
+
+  if (panning) {
+    pan.x = panOff.x + (mx - panStart.x)
+    pan.y = panOff.y + (my - panStart.y)
+    draw()
+    return
+  }
+
+  if (dragVert) {
+    const pt = toNorm(mx, my)
+    dragVert.hold.polygon[dragVert.idx] = [
+      +pt.x.toFixed(4),
+      +pt.y.toFixed(4),
+    ]
+    updateCenter(dragVert.hold)
+    draw()
+  }
+}
+
+canvas.onmouseup = () => {
+  dragVert = null
+  panning  = false
+}
+
+canvas.onwheel = (e) => {
+  e.preventDefault()
+  const mx = e.offsetX
+  const my = e.offsetY
+  const d  = e.deltaY > 0 ? 0.9 : 1.1
+
+  pan.x = mx - (mx - pan.x) * d
+  pan.y = my - (my - pan.y) * d
+  scale *= d
+
+  draw()
+}
+
+function updateCenter(h) {
+  let sx = 0, sy = 0
+  for (const p of h.polygon) {
+    sx += p[0]
+    sy += p[1]
+  }
+  h.cx = +(sx / h.polygon.length).toFixed(4)
+  h.cy = +(sy / h.polygon.length).toFixed(4)
+}
+
+function deleteSelected() {
+  if (!selected) { return }
+  holds = holds.filter(h => h.id !== selected)
+  selected = null
+  draw()
+  info.textContent = holds.length + " holds"
+}
+
+function nextHoldId() {
+  let max = 0
+  for (const h of holds) {
+    const n = parseInt(h.id.slice(1))
+    if (n > max) { max = n }
+  }
+  return "h" + (max + 1)
+}
+
+function toggleDraw() {
+  if (drawing) {
+    finishDraw()
+    return
+  }
+  drawing  = true
+  drawPts  = []
+  selected = null
+  document.getElementById("drawBtn").textContent = "finish hold"
+  info.textContent = "click to place vertices"
+  draw()
+}
+
+function finishDraw() {
+  if (drawPts.length >= 3) {
+    const h = {
+      id:      nextHoldId(),
+      polygon: drawPts,
+      cx:      0,
+      cy:      0,
+    }
+    updateCenter(h)
+    holds.push(h)
+    selected = h.id
+  }
+
+  drawing  = false
+  drawPts  = []
+  document.getElementById("drawBtn").textContent = "new hold"
+  draw()
+  info.textContent = holds.length + " holds"
+}
+
+function cancelDraw() {
+  drawing  = false
+  drawPts  = []
+  document.getElementById("drawBtn").textContent = "new hold"
+  draw()
+  info.textContent = holds.length + " holds"
+}
+
+document.onkeydown = (e) => {
+  if (drawing && e.key === "Enter") {
+    finishDraw()
+    return
+  }
+  if (drawing && e.key === "Escape") {
+    cancelDraw()
+    return
+  }
+  if (e.key === "n") {
+    toggleDraw()
+    return
+  }
+  if (e.key === "Backspace" || e.key === "Delete") {
+    deleteSelected()
+  }
+}
+
+function save() {
+  const blob = new Blob(
+    [JSON.stringify(holds, null, 2)],
+    { type: "application/json" }
+  )
+  const a  = document.createElement("a")
+  a.href   = URL.createObjectURL(blob)
+  a.download = "holds.json"
+  a.click()
+}
+</script>
+</body>
+</html>
