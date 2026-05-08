@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { supabase } from "../lib/supabase"
-import { useAuth } from "../contexts/AuthContext"
+import { useAuth } from "../components/AuthContext"
 import WallCanvas from "../components/WallCanvas"
 
 

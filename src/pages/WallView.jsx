@@ -1,9 +1,13 @@
 import { useState, useEffect } from "react"
 import { useParams, Link } from "react-router-dom"
 import { supabase } from "../lib/supabase"
-import { useAuth } from "../contexts/AuthContext"
+import { useAuth } from "../components/AuthContext"
 import WallCanvas from "../components/WallCanvas"
-import RouteList from "../components/RouteList"
+
+function gradeLabel(n) {
+  if (n == null) { return "?" }
+  return "V" + n
+}
 
 
 export default function WallView() {
@@ -79,7 +83,32 @@ export default function WallView() {
 
       {routes === null
         ? <p>loading...</p>
-        : <RouteList routes={routes} />
+        : routes.length === 0
+          ? <p>no routes yet.</p>
+          : <ul className="route-list">
+              {routes.map((r) => (
+                <li key={r.id}>
+                  <Link to={`/routes/${r.id}`}>
+                    <span>
+                      {r.name}
+                      {r.profiles?.display_name && (
+                        <span style={{ color: "var(--gray)", fontSize: 12 }}>
+                          {" "}by {r.profiles.display_name}
+                        </span>
+                      )}
+                    </span>
+                    <span>
+                      {r.ascents?.[0]?.count > 0 && (
+                        <span style={{ color: "var(--gray)", fontSize: 12 }}>
+                          {r.ascents[0].count} sends{" "}
+                        </span>
+                      )}
+                      <span className="grade">{gradeLabel(r.grade)}</span>
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
       }
     </div>
   )

@@ -1,7 +1,7 @@
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
-import { AuthProvider, useAuth } from "./contexts/AuthContext"
+import { AuthProvider, useAuth } from "./components/AuthContext"
 import Login from "./pages/Login"
 import Walls from "./pages/Walls"
 import WallView from "./pages/WallView"

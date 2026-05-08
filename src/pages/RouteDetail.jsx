@@ -1,9 +1,13 @@
 import { useState, useEffect } from "react"
 import { useParams, Link } from "react-router-dom"
 import { supabase } from "../lib/supabase"
-import { useAuth } from "../contexts/AuthContext"
-import { gradeLabel } from "../lib/grades"
+import { useAuth } from "../components/AuthContext"
 import WallCanvas from "../components/WallCanvas"
+
+function gradeLabel(n) {
+  if (n == null) { return "?" }
+  return "V" + n
+}
 
 
 export default function RouteDetail() {
