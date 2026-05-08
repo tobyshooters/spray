@@ -1,3 +1,17 @@
+I want to make a minimal, brutalist climbing app for spray walls. The idea is
+that you can select different holds on a spray wall and label them as part of
+a climb. There are users which can log in. A route gets assigned to a user
+(routesetter) and then can be done by a user (climber). I want to make the
+interface for creating the routes really clean, so I'm thinking we can use a
+segmentation model to to mask out different holds. (This part does not need to
+be done online. It can be a preprocessing step.) I want to keep the system as
+technically simple as possible, so I'm thinking of using something like
+Firebase or Supabase to do the two things that are needed: (1) user
+authentication, and (2) database management. Everything else can be a static
+website built using React. Hopefully we can get away with *not* running a
+server ourselves, and just doing static file hosting. Can you write a plan for
+this that I can give Claude Code?
+
 # Spray Wall App — Build Plan for Claude Code
 
 ## Overview
