@@ -28,7 +28,7 @@ export default function Rankings() {
       const scores = {}
       for (const a of ascents) {
         const pts = gradeMap[a.route_id] ?? 0
-        scores[a.climber_id] = (scores[a.climber_id] || 0) + pts
+        scores[a.climber_id] = (scores[a.climber_id] || 0) + (pts * pts)
       }
 
       const sorted = Object.entries(scores)
