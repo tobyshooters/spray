@@ -1,16 +1,42 @@
-# React + Vite
+# Spray
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A spray wall route-setting and tracking app. Set boulder problems on a spray wall, log ascents, rate routes, and compete on a leaderboard.
 
-Currently, two official plugins are available:
+Static React app backed by Supabase (auth, Postgres, storage). No server.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Live at [spray.arquipelago.org](https://spray.arquipelago.org).
 
-## React Compiler
+## Setup
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```
+cp .env.example .env   # fill in Supabase URL + anon key
+npm install
+npm run dev
+```
 
-## Expanding the ESLint configuration
+Supabase credentials are in your project dashboard under Settings > API. Use the **publishable** (anon) key, not the secret key.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Database
+
+Run `schema.sql` in the Supabase SQL Editor to create tables and RLS policies. Tables: `walls`, `routes`, `ascents`, `profiles`.
+
+Walls reference an image and holds JSON hosted in a public Supabase Storage bucket. Insert a wall row with the URLs after uploading.
+
+## Preprocessing
+
+The `preprocessing/` directory contains a SAM-based script to detect holds from a wall photo. See `preprocessing/README.md` for setup. There's also `editor.html`, a minimal canvas-based tool for tweaking hold polygons — run with `python3 -m http.server` from that directory.
+
+## Deploy
+
+```
+npm run publish
+```
+
+Builds and rsyncs `dist/` to the server. The server runs Caddy with `try_files` for SPA routing.
+
+## Stack
+
+- React (Vite) + React Router
+- Supabase (auth, Postgres, storage)
+- PWA via vite-plugin-pwa (cache-first for images/holds, network-first for API)
+- SAM (Segment Anything Model) for hold detection

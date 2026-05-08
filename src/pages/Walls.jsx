@@ -40,6 +40,10 @@ export default function Walls() {
           </li>
         ))}
       </ul>
+
+      <p style={{ marginTop: 32, fontSize: 11, color: "var(--gray)" }}>
+        <a href="https://github.com/tobyshooters/spray">github</a>
+      </p>
     </div>
   )
 }
