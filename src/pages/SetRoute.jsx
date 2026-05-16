@@ -130,20 +130,20 @@ export default function SetRoute() {
       </div>
 
       <div className="field">
-        <label>match</label>
-        <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, textTransform: "none", letterSpacing: 0, color: "var(--fg)" }}>
-          <input type="checkbox" checked={match} onChange={(e) => setMatch(e.target.checked)} style={{ width: "auto" }} />
-          two hands on a hold allowed
-        </label>
-      </div>
-
-      <div className="field">
         <label>volumes</label>
         <select value={volumes} onChange={(e) => setVolumes(e.target.value)}>
           <option value="any">any</option>
           <option value="holds only">holds only</option>
           <option value="none">none</option>
         </select>
+      </div>
+
+      <div className="field">
+        <label>match</label>
+        <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, textTransform: "none", letterSpacing: 0, color: "var(--fg)" }}>
+          <input type="checkbox" checked={match} onChange={(e) => setMatch(e.target.checked)} style={{ width: "auto" }} />
+          two hands on a hold allowed
+        </label>
       </div>
 
       <div className="field">

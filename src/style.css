@@ -33,7 +33,7 @@
   border: 1px solid var(--border);
   color: var(--gray);
   font-size: 11px;
-  padding: 4px 10px;
+  padding: 4px 8px;
   cursor: pointer;
 }
 
@@ -52,7 +52,7 @@ html, body, #root {
 
 a {
   color: var(--fg);
-  text-decoration: underline;
+  text-decoration: none;
 }
 
 button {
@@ -76,7 +76,7 @@ input, textarea, select {
   color: var(--fg);
   border: 1px solid var(--border);
   padding: 8px;
-  font-size: 14px;
+  font-size: 16px;
   width: 100%;
 }
 
@@ -140,7 +140,7 @@ input:focus, textarea:focus, select:focus {
 
 .header-links {
   display: flex;
-  gap: 16px;
+  gap: 12px;
   align-items: center;
   font-size: 12px;
   text-transform: uppercase;
@@ -169,6 +169,15 @@ input:focus, textarea:focus, select:focus {
   color: var(--red);
   font-size: 12px;
   margin-top: 4px;
+}
+
+.wall-list {
+  list-style: none;
+}
+
+.wall-list li {
+  border-bottom: 1px solid var(--border);
+  padding: 12px 0;
 }
 
 .route-list {

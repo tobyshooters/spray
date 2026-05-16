@@ -2,7 +2,7 @@ import { Link } from "react-router-dom"
 import { useAuth } from "./AuthContext"
 
 export default function Header({ back }) {
-  const { user, signOut } = useAuth()
+  const { user } = useAuth()
 
   return (
     <div className="header">
@@ -15,10 +15,7 @@ export default function Header({ back }) {
       <div className="header-links">
         <Link to="/rankings">rankings</Link>
         {user
-          ? <>
-              <Link to="/profile">profile</Link>
-              <button onClick={signOut}>log out</button>
-            </>
+          ? <Link to="/profile">profile</Link>
           : <Link to="/login">log in</Link>
         }
       </div>

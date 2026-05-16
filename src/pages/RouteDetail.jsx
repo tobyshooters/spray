@@ -105,16 +105,16 @@ export default function RouteDetail() {
     <div className="page">
       <Header back={{ to: `/walls/${route.wall_id}`, label: "wall" }} />
 
-      <p style={{paddingBottom: "11px"}}>
-        <b style={{paddingRight: "11px", textTransform: "capitalize"}}>
+      <p style={{paddingBottom: 12}}>
+        <b style={{paddingRight: 12, textTransform: "capitalize"}}>
           {route.name}
         </b>
       </p>
-      <p style={{paddingBottom: "11px"}}>
+      <p style={{paddingBottom: 12}}>
         <span className="grade">{gradeLabel(route.grade)}</span>
         {setter && <span> by {setter}</span>}
       </p>
-      <p style={{ paddingBottom: "11px", fontSize: 12, color: "var(--gray)" }}>
+      <p style={{ paddingBottom: 12, fontSize: 12, color: "var(--gray)" }}>
         {route.match && <span>match · </span>}
         {route.campus && <span>campus · </span>}
         <span>volumes: {route.volumes || "any"}</span>

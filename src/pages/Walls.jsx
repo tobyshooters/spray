@@ -42,7 +42,7 @@ export default function Walls() {
       {walls === null && <p>loading...</p>}
       {walls?.length === 0 && <p>No walls found.</p>}
 
-      <ul className="route-list">
+      <ul className="wall-list">
         {(walls || []).map((w) => (
           <li key={w.id}>
             <Link to={`/walls/${w.id}`}>{w.name}</Link>

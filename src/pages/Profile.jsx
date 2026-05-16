@@ -4,7 +4,7 @@ import { useAuth } from "../components/AuthContext"
 import Header from "../components/Header"
 
 export default function Profile() {
-  const { user }                = useAuth()
+  const { user, signOut }       = useAuth()
   const [name, setName]         = useState("")
   const [saving, setSaving]     = useState(false)
   const [saved, setSaved]       = useState(false)
@@ -53,28 +53,31 @@ export default function Profile() {
     <div className="page">
       <Header back={{ to: "/walls", label: "walls" }} />
 
-      <h1>profile</h1>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+        <span style={{ fontSize: 12, color: "var(--gray)" }}>{user.email}</span>
+        <button onClick={signOut} style={{ fontSize: 11, padding: "4px 16px" }}>log out</button>
+      </div>
 
       <form onSubmit={handleSave}>
-        <div className="field">
-          <label>display name</label>
+        <label className="field" style={{ display: "block", marginBottom: 4 }}>
+          Display name
+        </label>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
+            placeholder="display name"
           />
+          <button type="submit" disabled={saving} style={{ whiteSpace: "nowrap" }}>
+            {saving ? "saving..." : "save"}
+          </button>
         </div>
-
-        <button type="submit" disabled={saving}>
-          {saving ? "saving..." : "save"}
-        </button>
-
         {saved && (
-          <span style={{ marginLeft: 8, fontSize: 12 }}>
-            saved
-          </span>
+          <span style={{ fontSize: 12 }}>saved</span>
         )}
       </form>
+
     </div>
   )
 }
