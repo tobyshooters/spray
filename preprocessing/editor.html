@@ -43,6 +43,8 @@ canvas {
   <button onclick="deleteSelected()">delete hold</button>
   <button id="drawBtn" onclick="toggleDraw()">new hold</button>
   <button id="maskBtn" onclick="toggleMask()">mask</button>
+  <button onclick="fitSelectedHold()">fit (f)</button>
+  <span id="thresh">t=0.15</span>
   <span id="info">load wall.jpg + holds.json</span>
 </div>
 <canvas id="c"></canvas>
@@ -65,12 +67,17 @@ let panOff    = { x: 0, y: 0 }
 let drawing   = false
 let drawPts   = []
 let masked    = false
+let fitThreshold = 0.15
+let preFitPoly   = null
+let preFitHoldId = null
+let undoStack    = []
+const MAX_UNDO   = 50
 
 const VERT_R = 5
 
 Promise.all([
-  loadImage("/cp2/nova.png"),
-  fetch("/cp2/holds_v3.json").then(r => r.json()),
+  loadImage("/cp2/nova_fullres.png"),
+  fetch("/cp2/nova_holds.json").then(r => r.json()),
 ]).then(([image, data]) => {
   img   = image
   holds = data
@@ -287,6 +294,7 @@ canvas.onmousedown = (e) => {
 
   const v = hitVertex(mx, my)
   if (v) {
+    saveUndo()
     dragVert = v
     return
   }
@@ -339,6 +347,19 @@ canvas.onwheel = (e) => {
   draw()
 }
 
+function saveUndo() {
+  undoStack.push(JSON.stringify(holds))
+  if (undoStack.length > MAX_UNDO) undoStack.shift()
+}
+
+function undo() {
+  if (undoStack.length === 0) return
+  holds = JSON.parse(undoStack.pop())
+  selected = null
+  draw()
+  info.textContent = holds.length + " holds (undo)"
+}
+
 function updateCenter(h) {
   let sx = 0, sy = 0
   for (const p of h.polygon) {
@@ -351,6 +372,7 @@ function updateCenter(h) {
 
 function deleteSelected() {
   if (!selected) { return }
+  saveUndo()
   holds = holds.filter(h => h.id !== selected)
   selected = null
   draw()
@@ -381,6 +403,7 @@ function toggleDraw() {
 
 function finishDraw() {
   if (drawPts.length >= 3) {
+    saveUndo()
     const h = {
       id:      nextHoldId(),
       polygon: drawPts,
@@ -413,7 +436,410 @@ function cancelDraw() {
   info.textContent = holds.length + " holds"
 }
 
+function getHoldImageData(hold) {
+  const pts = hold.polygon
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+  for (const p of pts) {
+    if (p[0] < minX) minX = p[0]
+    if (p[1] < minY) minY = p[1]
+    if (p[0] > maxX) maxX = p[0]
+    if (p[1] > maxY) maxY = p[1]
+  }
+
+  const pxMinX = minX * img.width
+  const pxMinY = minY * img.height
+  const pxMaxX = maxX * img.width
+  const pxMaxY = maxY * img.height
+
+  const padX = (pxMaxX - pxMinX) * 0.2
+  const padY = (pxMaxY - pxMinY) * 0.2
+
+  const cropX = Math.max(0, Math.floor(pxMinX - padX))
+  const cropY = Math.max(0, Math.floor(pxMinY - padY))
+  const cropR = Math.min(img.width,  Math.ceil(pxMaxX + padX))
+  const cropB = Math.min(img.height, Math.ceil(pxMaxY + padY))
+  const cropW = cropR - cropX
+  const cropH = cropB - cropY
+
+  const off = document.createElement("canvas")
+  off.width  = cropW
+  off.height = cropH
+  const offCtx = off.getContext("2d")
+  offCtx.drawImage(img, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH)
+
+  return {
+    imageData: offCtx.getImageData(0, 0, cropW, cropH),
+    offsetX: cropX,
+    offsetY: cropY,
+    cropW,
+    cropH,
+  }
+}
+
+function rgbToHsl(r, g, b) {
+  r /= 255; g /= 255; b /= 255
+  const max = Math.max(r, g, b), min = Math.min(r, g, b)
+  const l = (max + min) / 2
+  if (max === min) return [0, 0, l]
+  const d = max - min
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+  let h
+  if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6
+  else if (max === g) h = ((b - r) / d + 2) / 6
+  else h = ((r - g) / d + 4) / 6
+  return [h * 360, s, l]
+}
+
+function hslDist(h1, s1, l1, h2, s2, l2) {
+  const rad1 = h1 * Math.PI / 180, rad2 = h2 * Math.PI / 180
+  const dx = s1 * Math.cos(rad1) - s2 * Math.cos(rad2)
+  const dy = s1 * Math.sin(rad1) - s2 * Math.sin(rad2)
+  const dl = l1 - l2
+  return Math.sqrt(dx * dx + dy * dy + dl * dl)
+}
+
+function sampleHoldColor(imageData, hold, offsetX, offsetY) {
+  const data = imageData.data
+  const w = imageData.width
+  const cx = hold.cx, cy = hold.cy
+  const shrink = 0.5
+
+  const hues = [], sats = [], lits = []
+
+  for (let py = 0; py < imageData.height; py += 2) {
+    for (let px = 0; px < w; px += 2) {
+      const nx = (offsetX + px) / img.width
+      const ny = (offsetY + py) / img.height
+      if (!pointInPolygon(nx, ny, hold.polygon)) continue
+
+      const snx = cx + (nx - cx) * shrink
+      const sny = cy + (ny - cy) * shrink
+      if (!pointInPolygon(snx, sny, hold.polygon)) continue
+
+      const i = (py * w + px) * 4
+      const [h, s, l] = rgbToHsl(data[i], data[i + 1], data[i + 2])
+      hues.push(h); sats.push(s); lits.push(l)
+    }
+  }
+
+  if (hues.length === 0) return null
+
+  const sinSum = hues.reduce((s, h) => s + Math.sin(h * Math.PI / 180), 0)
+  const cosSum = hues.reduce((s, h) => s + Math.cos(h * Math.PI / 180), 0)
+  const medH = ((Math.atan2(sinSum, cosSum) * 180 / Math.PI) + 360) % 360
+
+  sats.sort((a, b) => a - b)
+  lits.sort((a, b) => a - b)
+  const medS = sats[sats.length >> 1]
+  const medL = lits[lits.length >> 1]
+
+  return { hue: medH, sat: medS, lit: medL }
+}
+
+function buildColorMask(imageData, colorStats, threshold, hold, offsetX, offsetY) {
+  const data = imageData.data
+  const w = imageData.width
+  const h = imageData.height
+  const { hue, sat, lit } = colorStats
+
+  const expand = 1.1
+  const expanded = hold.polygon.map(([px, py]) => [
+    hold.cx + (px - hold.cx) * expand,
+    hold.cy + (py - hold.cy) * expand,
+  ])
+
+  const mask = new Uint8Array(w * h)
+  for (let py = 0; py < h; py++) {
+    for (let px = 0; px < w; px++) {
+      const nx = (offsetX + px) / img.width
+      const ny = (offsetY + py) / img.height
+      if (!pointInPolygon(nx, ny, expanded)) continue
+
+      const j = (py * w + px) * 4
+      const [ph, ps, pl] = rgbToHsl(data[j], data[j + 1], data[j + 2])
+      if (hslDist(ph, ps, pl, hue, sat, lit) < threshold) {
+        mask[py * w + px] = 1
+      }
+    }
+  }
+  return mask
+}
+
+function extractLargestBlob(mask, w, h, seedX, seedY) {
+  let sx = Math.round(seedX)
+  let sy = Math.round(seedY)
+
+  if (sx < 0 || sx >= w || sy < 0 || sy >= h || !mask[sy * w + sx]) {
+    let found = false
+    for (let r = 1; r <= 50 && !found; r++) {
+      for (let dy = -r; dy <= r && !found; dy++) {
+        for (let dx = -r; dx <= r && !found; dx++) {
+          if (Math.abs(dx) !== r && Math.abs(dy) !== r) continue
+          const nx = sx + dx, ny = sy + dy
+          if (nx >= 0 && nx < w && ny >= 0 && ny < h && mask[ny * w + nx]) {
+            sx = nx; sy = ny; found = true
+          }
+        }
+      }
+    }
+    if (!found) return null
+  }
+
+  const out = new Uint8Array(w * h)
+  const queue = [sx, sy]
+  out[sy * w + sx] = 1
+  let head = 0
+
+  while (head < queue.length) {
+    const cx = queue[head++]
+    const cy = queue[head++]
+    const neighbors = [[cx-1,cy],[cx+1,cy],[cx,cy-1],[cx,cy+1]]
+    for (const [nx, ny] of neighbors) {
+      if (nx < 0 || nx >= w || ny < 0 || ny >= h) continue
+      const idx = ny * w + nx
+      if (mask[idx] && !out[idx]) {
+        out[idx] = 1
+        queue.push(nx, ny)
+      }
+    }
+  }
+
+  return out
+}
+
+function traceContour(mask, w, h) {
+  let startX = -1, startY = -1
+  outer:
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (mask[y * w + x]) {
+        startX = x; startY = y
+        break outer
+      }
+    }
+  }
+  if (startX < 0) return []
+
+  const dx = [0, 1, 1, 1, 0, -1, -1, -1]
+  const dy = [-1, -1, 0, 1, 1, 1, 0, -1]
+
+  const contour = [[startX, startY]]
+  let cx = startX, cy = startY
+  let dir = 2
+
+  const maxIter = w * h * 2
+  for (let iter = 0; iter < maxIter; iter++) {
+    const searchStart = (dir + 5) % 8
+    let found = false
+
+    for (let i = 0; i < 8; i++) {
+      const d = (searchStart + i) % 8
+      const nx = cx + dx[d]
+      const ny = cy + dy[d]
+
+      if (nx >= 0 && nx < w && ny >= 0 && ny < h && mask[ny * w + nx]) {
+        if (nx === startX && ny === startY && contour.length > 2) {
+          return contour
+        }
+        cx = nx; cy = ny
+        dir = d
+        contour.push([cx, cy])
+        found = true
+        break
+      }
+    }
+
+    if (!found) break
+  }
+
+  return contour
+}
+
+function simplifyRDP(points, epsilon) {
+  if (points.length <= 2) return points.slice()
+
+  let maxDist = 0, maxIdx = 0
+  const [ax, ay] = points[0]
+  const [bx, by] = points[points.length - 1]
+  const lx = bx - ax, ly = by - ay
+  const len = Math.sqrt(lx * lx + ly * ly)
+
+  for (let i = 1; i < points.length - 1; i++) {
+    let dist
+    if (len < 1e-10) {
+      const dx = points[i][0] - ax, dy = points[i][1] - ay
+      dist = Math.sqrt(dx * dx + dy * dy)
+    } else {
+      dist = Math.abs(lx * (ay - points[i][1]) - ly * (ax - points[i][0])) / len
+    }
+    if (dist > maxDist) {
+      maxDist = dist
+      maxIdx = i
+    }
+  }
+
+  if (maxDist > epsilon) {
+    const left  = simplifyRDP(points.slice(0, maxIdx + 1), epsilon)
+    const right = simplifyRDP(points.slice(maxIdx), epsilon)
+    return left.slice(0, -1).concat(right)
+  }
+
+  return [points[0], points[points.length - 1]]
+}
+
+function morphErode(mask, w, h, r) {
+  const out = new Uint8Array(w * h)
+  for (let y = r; y < h - r; y++) {
+    for (let x = r; x < w - r; x++) {
+      let all = true
+      for (let dy = -r; dy <= r && all; dy++) {
+        for (let dx = -r; dx <= r && all; dx++) {
+          if (dx * dx + dy * dy <= r * r && !mask[(y + dy) * w + (x + dx)]) {
+            all = false
+          }
+        }
+      }
+      if (all) out[y * w + x] = 1
+    }
+  }
+  return out
+}
+
+function morphDilate(mask, w, h, r) {
+  const out = new Uint8Array(w * h)
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (!mask[y * w + x]) continue
+      for (let dy = -r; dy <= r; dy++) {
+        for (let dx = -r; dx <= r; dx++) {
+          if (dx * dx + dy * dy > r * r) continue
+          const ny = y + dy, nx = x + dx
+          if (nx >= 0 && nx < w && ny >= 0 && ny < h) {
+            out[ny * w + nx] = 1
+          }
+        }
+      }
+    }
+  }
+  return out
+}
+
+function morphOpen(mask, w, h, r) {
+  return morphDilate(morphErode(mask, w, h, r), w, h, r)
+}
+
+function smoothContour(points, passes) {
+  let pts = points
+  for (let p = 0; p < passes; p++) {
+    const n = pts.length
+    const out = new Array(n)
+    for (let i = 0; i < n; i++) {
+      const prev = pts[(i - 1 + n) % n]
+      const curr = pts[i]
+      const next = pts[(i + 1) % n]
+      out[i] = [
+        curr[0] * 0.5 + (prev[0] + next[0]) * 0.25,
+        curr[1] * 0.5 + (prev[1] + next[1]) * 0.25,
+      ]
+    }
+    pts = out
+  }
+  return pts
+}
+
+function fitSelectedHold() {
+  if (drawing || !selected) {
+    info.textContent = "select a hold first"
+    return
+  }
+
+  const hold = holds.find(h => h.id === selected)
+  if (!hold) return
+  saveUndo()
+
+  if (preFitHoldId === hold.id && preFitPoly) {
+    hold.polygon = preFitPoly.map(p => p.slice())
+    updateCenter(hold)
+  } else {
+    preFitPoly = hold.polygon.map(p => p.slice())
+    preFitHoldId = hold.id
+  }
+
+  try {
+    const { imageData, offsetX, offsetY, cropW, cropH } = getHoldImageData(hold)
+    console.log("fit: crop", cropW, "x", cropH, "at", offsetX, offsetY)
+
+    const colorStats = sampleHoldColor(imageData, hold, offsetX, offsetY)
+    if (!colorStats) {
+      info.textContent = "fit failed -- no pixels sampled"
+      return
+    }
+    console.log("fit: hue", colorStats.hue.toFixed(1) + "°", "sat", colorStats.sat.toFixed(2), "lit", colorStats.lit.toFixed(2))
+
+    const rawMask = buildColorMask(imageData, colorStats, fitThreshold, hold, offsetX, offsetY)
+    let maskCount = 0
+    for (let i = 0; i < rawMask.length; i++) if (rawMask[i]) maskCount++
+    console.log("fit: mask pixels", maskCount, "/", cropW * cropH, "t=" + fitThreshold.toFixed(2))
+
+    const seedX = hold.cx * img.width - offsetX
+    const seedY = hold.cy * img.height - offsetY
+    console.log("fit: seed", seedX.toFixed(0), seedY.toFixed(0))
+    const blob = extractLargestBlob(rawMask, cropW, cropH, seedX, seedY)
+    if (!blob) {
+      info.textContent = "fit failed -- no region found, try ] to increase threshold"
+      return
+    }
+    let blobCount = 0
+    for (let i = 0; i < blob.length; i++) if (blob[i]) blobCount++
+    console.log("fit: blob pixels", blobCount)
+
+    const opened = morphOpen(blob, cropW, cropH, 3)
+    let openedCount = 0
+    for (let i = 0; i < opened.length; i++) if (opened[i]) openedCount++
+    const traceMask = openedCount > 0 ? opened : blob
+    const contour = traceContour(traceMask, cropW, cropH)
+    console.log("fit: contour points", contour.length)
+    if (contour.length < 3) {
+      info.textContent = "fit failed -- contour too small"
+      return
+    }
+
+    const smoothed = smoothContour(contour, 3)
+
+    let cMinX = Infinity, cMinY = Infinity, cMaxX = -Infinity, cMaxY = -Infinity
+    for (const [px, py] of smoothed) {
+      if (px < cMinX) cMinX = px
+      if (py < cMinY) cMinY = py
+      if (px > cMaxX) cMaxX = px
+      if (py > cMaxY) cMaxY = py
+    }
+    const epsilon = Math.max(1, Math.max(cMaxX - cMinX, cMaxY - cMinY) * 0.015)
+    const simplified = simplifyRDP(smoothed, epsilon)
+    console.log("fit: simplified", contour.length, "->", simplified.length, "eps", epsilon.toFixed(1))
+
+    hold.polygon = simplified.map(([px, py]) => [
+      +((offsetX + px) / img.width).toFixed(4),
+      +((offsetY + py) / img.height).toFixed(4),
+    ])
+    updateCenter(hold)
+    draw()
+    info.textContent = "fit: " + hold.polygon.length + " vertices, t=" + fitThreshold.toFixed(2)
+  } catch (err) {
+    info.textContent = "fit error: " + err.message
+  }
+}
+
 document.onkeydown = (e) => {
+  if (e.key === "s" && (e.ctrlKey || e.metaKey)) {
+    e.preventDefault()
+    save()
+    return
+  }
+  if (e.key === "z" && (e.ctrlKey || e.metaKey)) {
+    e.preventDefault()
+    undo()
+    return
+  }
   if (drawing && e.key === "Enter") {
     finishDraw()
     return
@@ -428,6 +854,22 @@ document.onkeydown = (e) => {
   }
   if (e.key === "m") {
     toggleMask()
+    return
+  }
+  if (e.key === "f") {
+    fitSelectedHold()
+    return
+  }
+  if (e.key === "[") {
+    fitThreshold = Math.max(0.02, +(fitThreshold - 0.02).toFixed(2))
+    document.getElementById("thresh").textContent = "t=" + fitThreshold.toFixed(2)
+    fitSelectedHold()
+    return
+  }
+  if (e.key === "]") {
+    fitThreshold = Math.min(0.5, +(fitThreshold + 0.02).toFixed(2))
+    document.getElementById("thresh").textContent = "t=" + fitThreshold.toFixed(2)
+    fitSelectedHold()
     return
   }
   if (e.key === "Backspace" || e.key === "Delete") {

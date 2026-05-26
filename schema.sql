@@ -28,7 +28,8 @@ create table ascents (
   suggested_grade smallint,
   attempts        smallint default 1,
   notes           text,
-  date            date default current_date
+  date            date default current_date,
+  unique (route_id, climber_id)
 );
 
 create table profiles (
@@ -90,4 +91,10 @@ create policy "ascents_read"
 create policy "ascents_insert"
   on ascents for insert
   to authenticated
+  with check (climber_id = auth.uid());
+
+create policy "ascents_update"
+  on ascents for update
+  to authenticated
+  using (climber_id = auth.uid())
   with check (climber_id = auth.uid());
