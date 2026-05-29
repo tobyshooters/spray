@@ -239,6 +239,7 @@ export default function RouteDetail() {
           </b>
           <br/>
           <span className="grade">{gradeLabel(route.grade)}</span>
+          {existingAscent && <span style={{ color: "#0c0", fontSize: 15 }}> ✔</span>}
           {setter && <span style={{ fontSize: 12 }}> por {setter}</span>}
         </div>
         <button className="theme-toggle" onClick={() => nextId && navigate(`/routes/${nextId}`)} disabled={!nextId}>▶</button>

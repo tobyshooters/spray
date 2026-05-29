@@ -164,13 +164,16 @@ export default function WallView() {
                       )}
                     </span>
 
-                    <span style={{ color: "var(--gray)", fontSize: 12, textAlign: "right" }}>
-                      {sentSet.has(r.id) && (
-                        <span style={{ color: "#0c0", fontSize: 15, marginRight: 4 }}>✔</span>
-                      )}
-                      {r.ascents?.[0]?.count > 0 ? `${r.ascents[0].count} sends` : ""}
+                    <span style={{ textAlign: "right" }}>
+                      <span className="grade">{gradeLabel(r.grade)}</span>
+                      <br/>
+                      <span style={{ color: "var(--gray)", fontSize: 12 }}>
+                        {sentSet.has(r.id) && (
+                          <span style={{ color: "#0c0", fontSize: 15, marginRight: 4 }}>✔</span>
+                        )}
+                        {r.ascents?.[0]?.count > 0 ? `${r.ascents[0].count} sends` : ""}
+                      </span>
                     </span>
-                    <span className="grade" style={{ textAlign: "right" }}>{gradeLabel(r.grade)}</span>
                   </Link>
                 </li>
               ))}

@@ -203,7 +203,7 @@ a.btn {
 
 .route-list li a {
   display: grid;
-  grid-template-columns: 4fr 1fr 1fr;
+  grid-template-columns: 4fr 1fr;
   gap: 12px;
   align-items: baseline;
 }
