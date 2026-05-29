@@ -65,18 +65,48 @@ export default function RouteDetail() {
     },
   })
 
-  const { data: siblingIds = [] } = useQuery({
-    queryKey: keys.siblings(route?.wall_id),
+  const { data: wallRoutes } = useQuery({
+    queryKey: keys.wallRoutes(String(route?.wall_id)),
     enabled: !!route?.wall_id,
     queryFn: async () => {
       const { data } = await supabase
         .from("routes")
-        .select("id")
+        .select("*, profiles(display_name), ascents(count)")
         .eq("wall_id", route.wall_id)
-        .order("id")
-      return (data || []).map(r => r.id)
+        .order("created_at", { ascending: false })
+      return data || []
     },
   })
+
+  const { data: sentRouteIds } = useQuery({
+    queryKey: keys.myWallAscents(String(route?.wall_id), user?.id),
+    enabled: !!user && !!wallRoutes && wallRoutes.length > 0,
+    queryFn: async () => {
+      const ids = wallRoutes.map(r => r.id)
+      const { data } = await supabase
+        .from("ascents")
+        .select("route_id")
+        .eq("climber_id", user.id)
+        .in("route_id", ids)
+      return (data || []).map(a => a.route_id)
+    },
+  })
+
+  const siblingIds = (() => {
+    if (!wallRoutes) return []
+    const sort = localStorage.getItem("routeSort") || "date"
+    const asc = localStorage.getItem("routeAsc") !== "false"
+    const filter = localStorage.getItem("routeFilter") || "all"
+    const sentSet = new Set(sentRouteIds || [])
+    return [...wallRoutes]
+      .filter(r => filter === "all" || !sentSet.has(r.id))
+      .sort((a, b) => {
+        const dir = asc ? 1 : -1
+        if (sort === "grade") return dir * ((a.grade ?? -1) - (b.grade ?? -1))
+        return dir * (a.created_at < b.created_at ? 1 : a.created_at > b.created_at ? -1 : 0)
+      })
+      .map(r => r.id)
+  })()
 
   const { data: ascents } = useQuery({
     queryKey: keys.ascents(id),
