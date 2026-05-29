@@ -21,6 +21,7 @@ export default function WallView() {
   const [sort, setSort]         = useState(() => localStorage.getItem("routeSort") || "date")
   const [asc, setAsc]           = useState(() => localStorage.getItem("routeAsc") !== "false")
   const [masked, setMasked]     = useState(true)
+  const [filter, setFilter]     = useState(() => localStorage.getItem("routeFilter") || "all")
 
   const { data: wall } = useQuery({
     queryKey: keys.wall(id),
@@ -88,26 +89,38 @@ export default function WallView() {
             thumbUrl={thumbUrl}
             holds={holds}
             masked={masked}
-          />
-          <button
-            onClick={() => setMasked(!masked)}
-            style={{ marginTop: 8, fontSize: 11, padding: "4px 8px" }}
           >
-            {masked ? "ver muro" : "só agarras"}
-          </button>
+            <button
+              onClick={() => setMasked(!masked)}
+              style={{ fontSize: 13, padding: "4px 8px" }}
+            >
+              {masked ? "ver muro" : "só agarras"}
+            </button>
+          </WallCanvas>
         </>
       )}
 
       <div className="header" style={{ marginTop: 32 }}>
         <div className="header-links">
-          <h2>vias</h2>
           {user && (
-            <Link to={`/walls/${id}/set`} className="btn" style={{marginLeft: "6px"}}>
-              + abrir via
+            <Link to={`/walls/${id}/set`} className="btn" style={{marginLeft: "6px", padding: "4px 6px", fontSize: 13}}>
+              + abrir
             </Link>
           )}
         </div>
         <div className="header-links">
+          {user && (
+            <button
+              className="theme-toggle"
+              onClick={() => {
+                const next = filter === "all" ? "unsent" : "all"
+                setFilter(next)
+                localStorage.setItem("routeFilter", next)
+              }}
+            >
+              {filter === "all" ? "todas" : "faltam"}
+            </button>
+          )}
           <button
             className="theme-toggle"
             onClick={() => {
@@ -124,7 +137,7 @@ export default function WallView() {
             className="theme-toggle"
             onClick={() => { setAsc(a => { const v = !a; localStorage.setItem("routeAsc", v); return v }) }}
           >
-            {asc ? "↑" : "↓"}
+            {asc ? "▲" : "▼"}
           </button>
         </div>
       </div>
@@ -134,7 +147,7 @@ export default function WallView() {
         : routes.length === 0
           ? <p>sem vias.</p>
           : <ul className="route-list">
-              {[...routes].sort((a, b) => {
+              {[...routes].filter(r => filter === "all" || !sentSet.has(r.id)).sort((a, b) => {
                 const dir = asc ? 1 : -1
                 if (sort === "grade") return dir * ((a.grade ?? -1) - (b.grade ?? -1))
                 return dir * (a.created_at < b.created_at ? 1 : a.created_at > b.created_at ? -1 : 0)

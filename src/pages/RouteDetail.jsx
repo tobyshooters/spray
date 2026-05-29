@@ -202,7 +202,7 @@ export default function RouteDetail() {
         onTouchEnd={handleTouchEnd}
         style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: 12, touchAction: "pan-y" }}
       >
-        <button onClick={() => prevId && navigate(`/routes/${prevId}`)} disabled={!prevId} style={{ padding: "4px 8px", fontSize: 14 }}>&larr;</button>
+        <button className="theme-toggle" onClick={() => prevId && navigate(`/routes/${prevId}`)} disabled={!prevId}>◀</button>
         <div style={{ textAlign: "center", flex: 1 }}>
           <b style={{textTransform: "capitalize"}}>
             {route.name}
@@ -211,14 +211,8 @@ export default function RouteDetail() {
           <span className="grade">{gradeLabel(route.grade)}</span>
           {setter && <span style={{ fontSize: 12 }}> por {setter}</span>}
         </div>
-        <button onClick={() => nextId && navigate(`/routes/${nextId}`)} disabled={!nextId} style={{ padding: "4px 8px", fontSize: 14 }}>&rarr;</button>
+        <button className="theme-toggle" onClick={() => nextId && navigate(`/routes/${nextId}`)} disabled={!nextId}>▶</button>
       </div>
-      <p style={{ paddingBottom: 12, fontSize: 12, color: "var(--gray)" }}>
-        <span>{route.match ? "pode juntar" : "não pode juntar"} · </span>
-        {route.campus && <span>campus · </span>}
-        <span>volumes: {route.volumes === "any" ? "qualquer" : route.volumes === "holds only" ? "só das agarras" : route.volumes || "qualquer"}</span>
-      </p>
-
       {imageUrl && (
         <>
           <WallCanvas
@@ -229,22 +223,35 @@ export default function RouteDetail() {
             holdsMap={route.holds_map || {}}
             masked={masked}
             maskedIds={Object.keys(route.holds_map || {})}
-          />
-          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8 }}>
+          >
             <button
               onClick={() => setMasked(!masked)}
-              style={{ fontSize: 11, padding: "4px 8px" }}
+              style={{ fontSize: 13, padding: "4px 8px" }}
             >
               {masked ? "ver muro" : "só agarras"}
             </button>
-            {user && user.id === route.setter_id && (
-              <Link to={`/routes/${id}/edit`} style={{ fontSize: 12 }}>editar</Link>
-            )}
-          </div>
+          </WallCanvas>
         </>
       )}
 
-      <h2 style={{ marginTop: ascents && ascents.length > 0 ? 32 : 16 }}>
+      <p style={{ marginTop: 16, color: route.description ? "var(--fg)" : "var(--gray)" }}>
+        {route.description || "Sem descrição."}
+      </p>
+      <p style={{ marginTop: 8, fontSize: 12, color: "var(--gray)" }}>
+        <span>{route.match ? "pode juntar" : "não pode juntar"} · </span>
+        {route.campus && <span>campus · </span>}
+        <span>volumes: {route.volumes === "any" ? "qualquer" : route.volumes === "holds only" ? "só das agarras" : route.volumes || "qualquer"}</span>
+      </p>
+
+      {user && user.id === route.setter_id && (
+        <button onClick={() => navigate(`/routes/${id}/edit`)} style={{ marginTop: 12 }}>
+          editar via
+        </button>
+      )}
+
+      <hr style={{ marginTop: 24, border: "none", borderTop: "1px solid var(--gray)" }} />
+
+      <h2 style={{ marginTop: 24 }}>
         sends {ascents && `(${ascents.length})`}
       </h2>
 
@@ -271,9 +278,8 @@ export default function RouteDetail() {
 
       {user && (
         <>
-          <h2 style={{ marginTop: 16 }}>{existingAscent ? "editar send" : "log send"}</h2>
 
-          <div style={{ display: "flex", gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: 16, alignItems: "flex-start", flexWrap: "wrap", marginTop: 32 }}>
             <div className="field" style={{ margin: 0 }}>
               <label>estrelas</label>
               <div style={{ display: "flex", gap: 4 }}>
@@ -347,6 +353,7 @@ export default function RouteDetail() {
           >
             {ascentMutation.isPending ? "guardando..." : existingAscent ? "editar send" : "log send"}
           </button>
+
         </>
       )}
 

@@ -16,8 +16,9 @@ create table routes (
   grade      smallint,
   match      boolean default false,
   volumes    text default 'any',
-  campus     boolean default false,
-  created_at timestamptz default now()
+  campus      boolean default false,
+  description text default '',
+  created_at  timestamptz default now()
 );
 
 create table ascents (

@@ -62,7 +62,7 @@ export default function Profile() {
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <span style={{ fontSize: 12, color: "var(--gray)" }}>{user.email}</span>
-        <button onClick={signOut} style={{ fontSize: 11, padding: "4px 16px" }}>sair</button>
+        <button onClick={signOut} style={{ fontSize: 13, padding: "4px 16px" }}>sair</button>
       </div>
 
       <form onSubmit={handleSave}>

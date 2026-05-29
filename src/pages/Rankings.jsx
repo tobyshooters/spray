@@ -136,7 +136,7 @@ export default function Rankings() {
                 {r.pts} pts
               </span>
             </div>
-            <div style={{ fontSize: 11, color: "var(--gray)", marginTop: 4 }}>
+            <div style={{ fontSize: 13, color: "var(--gray)", marginTop: 4 }}>
               {GRADES.map((label, g) =>
                 r.byGrade[g]
                   ? <span key={g} style={{ marginRight: 8 }}>{r.byGrade[g]}x{label}</span>

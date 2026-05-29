@@ -71,6 +71,7 @@ export default function WallCanvas({
   masked = false,
   maskedIds = null,
   editing = false,
+  children,
 }) {
   const [thumbLoaded, setThumbLoaded] = useState(false)
   const [loaded, setLoaded] = useState(() => {
@@ -110,28 +111,9 @@ export default function WallCanvas({
     <div
       className={onHoldTap ? "wall-canvas-container interactive" : "wall-canvas-container"}
     >
-      {(
-        <div style={{ 
-          visibility: (onHoldTap || hasHolds) ? "visible" : "hidden",
-          marginBottom: 6, 
-          fontSize: 11, 
-        }}>
-          <div style={{display: "flex", gap: 12}}>
-            {HOLD_TYPE_NAMES.map((type) => (
-              <span key={type} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <span style={{
-                  display: "inline-block", width: 10, height: 10, borderRadius: 2,
-                  background: HOLD_COLORS[type].fill, border: `1px solid ${HOLD_COLORS[type].stroke}`,
-                }} />
-                {HOLD_TYPE_LABELS[type]}
-              </span>
-            ))}
-          </div>
-          {editing && (
-            <div style={{marginTop: 6}}>
-              <span>double-tap para selecionar agarra</span>
-            </div>
-          )}
+      {editing && (
+        <div style={{ marginBottom: 6, fontSize: 13 }}>
+          <span>double-tap para selecionar agarra</span>
         </div>
       )}
       <div className="wall-canvas">
@@ -214,6 +196,22 @@ export default function WallCanvas({
           ))}
         </svg>
       </div>
+      {(onHoldTap || hasHolds || children) && (
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6, fontSize: 13 }}>
+          <div style={{ display: "flex", gap: 12 }}>
+            {(onHoldTap || hasHolds) && HOLD_TYPE_NAMES.map((type) => (
+              <span key={type} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <span style={{
+                  display: "inline-block", width: 10, height: 10, borderRadius: 2,
+                  background: HOLD_COLORS[type].fill, border: `1px solid ${HOLD_COLORS[type].stroke}`,
+                }} />
+                {HOLD_TYPE_LABELS[type]}
+              </span>
+            ))}
+          </div>
+          {children}
+        </div>
+      )}
     </div>
   )
 }

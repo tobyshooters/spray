@@ -58,7 +58,7 @@ export default function Walls() {
         ))}
       </ul>
 
-      <p style={{ marginTop: 32, fontSize: 11, color: "var(--gray)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <p style={{ marginTop: 32, fontSize: 13, color: "var(--gray)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <a href="https://github.com/tobyshooters/spray">github</a>
         <button className="theme-toggle" onClick={cycleTheme}>{THEME_LABELS[theme]} {theme}</button>
       </p>

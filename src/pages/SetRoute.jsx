@@ -27,6 +27,7 @@ export default function SetRoute() {
   const [match, setMatch]         = useState(true)
   const [volumes, setVolumes]     = useState("holds only")
   const [campus, setCampus]       = useState(false)
+  const [description, setDescription] = useState("")
   const [masked, setMasked]       = useState(false)
 
   const { data: editRoute } = useQuery({
@@ -51,6 +52,7 @@ export default function SetRoute() {
     setMatch(editRoute.match || true)
     setVolumes(editRoute.volumes || "any")
     setCampus(editRoute.campus || false)
+    setDescription(editRoute.description || "")
   }, [editRoute?.id])
 
   const { data: hasProfile = true } = useQuery({
@@ -119,7 +121,7 @@ export default function SetRoute() {
     mutationFn: async () => {
       const fields = {
         name, grade, holds_map: holdsMap,
-        match, volumes, campus,
+        match, volumes, campus, description,
       }
 
       if (isEdit) {
@@ -159,18 +161,17 @@ export default function SetRoute() {
             maskedIds={selectedIds}
             onHoldTap={masked ? undefined : handleHoldTap}
             editing
-          />
-          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8 }}>
-            <p style={{ fontSize: 11 }}>
-              {selectedIds.length} agarras
-            </p>
-            <button
-              onClick={() => setMasked(!masked)}
-              style={{ fontSize: 11, padding: "4px 8px" }}
-            >
-              {masked ? "editar agarras" : "preview via"}
-            </button>
-          </div>
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <span style={{ fontSize: 13 }}>{selectedIds.length} agarras</span>
+              <button
+                onClick={() => setMasked(!masked)}
+                style={{ fontSize: 13, padding: "4px 8px" }}
+              >
+                {masked ? "editar agarras" : "preview via"}
+              </button>
+            </div>
+          </WallCanvas>
         </>
       )}
 
@@ -179,6 +180,15 @@ export default function SetRoute() {
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
+        />
+      </div>
+
+      <div className="field">
+        <label>descrição (opcional)</label>
+        <textarea
+          rows={2}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
         />
       </div>
 
