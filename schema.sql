@@ -33,6 +33,12 @@ create table ascents (
   unique (route_id, climber_id)
 );
 
+create table favorites (
+  user_id  uuid   not null references profiles(id),
+  route_id bigint not null references routes(id) on delete cascade,
+  primary key (user_id, route_id)
+);
+
 create table profiles (
   id           uuid primary key references auth.users(id),
   display_name text not null
@@ -95,6 +101,24 @@ create policy "routes_update"
   on routes for update
   to authenticated
   using (setter_id = auth.uid());
+
+-- favorites: user can manage their own
+alter table favorites enable row level security;
+
+create policy "favorites_read"
+  on favorites for select
+  to authenticated
+  using (user_id = auth.uid());
+
+create policy "favorites_insert"
+  on favorites for insert
+  to authenticated
+  with check (user_id = auth.uid());
+
+create policy "favorites_delete"
+  on favorites for delete
+  to authenticated
+  using (user_id = auth.uid());
 
 -- ascents: anyone can read, authenticated can insert their own
 create policy "ascents_read"

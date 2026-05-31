@@ -41,7 +41,7 @@ export default function WallView() {
     queryFn: async () => {
       const { data } = await supabase
         .from("routes")
-        .select("*, profiles(display_name), ascents(count)")
+        .select("*, profiles!routes_setter_id_fkey(display_name), ascents(count)")
         .eq("wall_id", id)
         .order("created_at", { ascending: false })
       return data || []
@@ -62,6 +62,21 @@ export default function WallView() {
     },
   })
   const sentSet = new Set(sentRouteIds || [])
+
+  const { data: favRouteIds } = useQuery({
+    queryKey: keys.myWallFavorites(id, user?.id),
+    enabled: !!user && !!routes && routes.length > 0,
+    queryFn: async () => {
+      const ids = routes.map(r => r.id)
+      const { data } = await supabase
+        .from("favorites")
+        .select("route_id")
+        .eq("user_id", user.id)
+        .in("route_id", ids)
+      return (data || []).map(f => f.route_id)
+    },
+  })
+  const favSet = new Set(favRouteIds || [])
 
   const { data: holds = [] } = useQuery({
     queryKey: keys.holds(wall?.holds_json_url),
@@ -113,12 +128,12 @@ export default function WallView() {
             <button
               className="theme-toggle"
               onClick={() => {
-                const next = filter === "all" ? "unsent" : "all"
+                const next = filter === "all" ? "unsent" : filter === "unsent" ? "favorites" : "all"
                 setFilter(next)
                 localStorage.setItem("routeFilter", next)
               }}
             >
-              {filter === "all" ? "todas" : "faltam"}
+              {filter === "all" ? "todas" : filter === "unsent" ? "faltam" : "favoritos"}
             </button>
           )}
           <button
@@ -147,7 +162,11 @@ export default function WallView() {
         : routes.length === 0
           ? <p>sem vias.</p>
           : <ul className="route-list">
-              {[...routes].filter(r => filter === "all" || !sentSet.has(r.id)).sort((a, b) => {
+              {[...routes].filter(r => {
+                if (filter === "unsent") return !sentSet.has(r.id)
+                if (filter === "favorites") return favSet.has(r.id)
+                return true
+              }).sort((a, b) => {
                 const dir = asc ? 1 : -1
                 if (sort === "grade") return dir * ((a.grade ?? -1) - (b.grade ?? -1))
                 return dir * (a.created_at < b.created_at ? 1 : a.created_at > b.created_at ? -1 : 0)
@@ -156,6 +175,7 @@ export default function WallView() {
                   <Link to={`/routes/${r.id}`}>
                     <span>
                       {r.name}
+                      {favSet.has(r.id) && <span style={{ fontSize: 13, marginLeft: 4 }}>⭐</span>}
 
                       {r.profiles?.display_name && (
                         <span style={{ color: "var(--gray)", fontSize: 12 }}>

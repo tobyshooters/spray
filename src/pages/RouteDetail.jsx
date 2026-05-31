@@ -71,7 +71,7 @@ export default function RouteDetail() {
     queryFn: async () => {
       const { data } = await supabase
         .from("routes")
-        .select("*, profiles(display_name), ascents(count)")
+        .select("*, profiles!routes_setter_id_fkey(display_name), ascents(count)")
         .eq("wall_id", route.wall_id)
         .order("created_at", { ascending: false })
       return data || []
@@ -92,6 +92,37 @@ export default function RouteDetail() {
     },
   })
 
+  const { data: favRouteIds } = useQuery({
+    queryKey: keys.myWallFavorites(String(route?.wall_id), user?.id),
+    enabled: !!user && !!wallRoutes && wallRoutes.length > 0,
+    queryFn: async () => {
+      const ids = wallRoutes.map(r => r.id)
+      const { data } = await supabase
+        .from("favorites")
+        .select("route_id")
+        .eq("user_id", user.id)
+        .in("route_id", ids)
+      return (data || []).map(f => f.route_id)
+    },
+  })
+  const favSet = new Set(favRouteIds || [])
+  const isFav = favSet.has(Number(id))
+
+  const favMutation = useMutation({
+    mutationFn: async () => {
+      if (isFav) {
+        await supabase.from("favorites").delete().eq("user_id", user.id).eq("route_id", id)
+      } else {
+        await supabase.from("favorites").upsert({ user_id: user.id, route_id: id }, { onConflict: "user_id,route_id" })
+      }
+    },
+    onSuccess: () => {
+      if (route?.wall_id) {
+        queryClient.invalidateQueries({ queryKey: keys.myWallFavorites(String(route.wall_id), user.id) })
+      }
+    },
+  })
+
   const siblingIds = (() => {
     if (!wallRoutes) return []
     const sort = localStorage.getItem("routeSort") || "date"
@@ -99,7 +130,11 @@ export default function RouteDetail() {
     const filter = localStorage.getItem("routeFilter") || "all"
     const sentSet = new Set(sentRouteIds || [])
     return [...wallRoutes]
-      .filter(r => filter === "all" || !sentSet.has(r.id))
+      .filter(r => {
+        if (filter === "unsent") return !sentSet.has(r.id)
+        if (filter === "favorites") return favSet.has(r.id)
+        return true
+      })
       .sort((a, b) => {
         const dir = asc ? 1 : -1
         if (sort === "grade") return dir * ((a.grade ?? -1) - (b.grade ?? -1))
@@ -235,7 +270,7 @@ export default function RouteDetail() {
         <button className="theme-toggle" onClick={() => prevId && navigate(`/routes/${prevId}`)} disabled={!prevId}>◀</button>
         <div style={{ textAlign: "center", flex: 1 }}>
           <b style={{textTransform: "capitalize"}}>
-            {route.name}
+            {route.name}{isFav && <span style={{ fontSize: 13, marginLeft: 4 }}>⭐</span>}
           </b>
           <br/>
           <span className="grade">{gradeLabel(route.grade)}</span>
@@ -355,17 +390,31 @@ export default function RouteDetail() {
 
             <div className="field" style={{ margin: 0 }}>
               <label>tentativas</label>
-              <input
-                type="number"
-                min={1}
-                value={attempts}
-                onChange={(e) => setAttempts(e.target.value)}
-                onBlur={() => {
-                  const n = parseInt(attempts)
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <input
+                  type="number"
+                  min={1}
+                  value={attempts}
+                  onChange={(e) => setAttempts(e.target.value)}
+                  onBlur={() => {
+                    const n = parseInt(attempts)
                   setAttempts(n >= 1 ? n : 1)
                 }}
                 style={{ width: 80, padding: "4px 8px", fontSize: 14 }}
               />
+              </div>
+            </div>
+
+            <div className="field" style={{ margin: 0 }}>
+              <label>favoritar</label>
+              <button
+                className="theme-toggle"
+                onClick={() => favMutation.mutate()}
+                disabled={favMutation.isPending}
+                style={{ fontSize: 14, padding: 0, height: 27, width: 27, boxSizing: "border-box", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center" }}
+              >
+                {isFav ? "⭐" : "☆"}
+              </button>
             </div>
           </div>
 
