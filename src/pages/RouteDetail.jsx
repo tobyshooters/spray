@@ -206,7 +206,12 @@ export default function RouteDetail() {
         }
       }
       queryClient.invalidateQueries({ queryKey: keys.rankings() })
-      setShowFelipe(true)
+      const grade = route?.grade ?? 0
+      if (Math.max(1, parseInt(attempts) || 1) > 1 && grade < 3) {
+        setShowFelipe("lucas")
+      } else {
+        setShowFelipe("felipe")
+      }
     },
   })
 
@@ -439,7 +444,7 @@ export default function RouteDetail() {
         </>
       )}
 
-      {showFelipe && (
+      {!!showFelipe && (
         <div
           onClick={() => setShowFelipe(false)}
           style={{
@@ -453,7 +458,7 @@ export default function RouteDetail() {
             cursor: "pointer",
           }}
         >
-          <img src="/felipe.webp" alt="felipe" style={{ maxWidth: "80%", maxHeight: "80vh", borderRadius: 12 }} />
+          <img src={showFelipe === "lucas" ? "/lucas.webp" : "/felipe.webp"} alt={showFelipe} style={{ maxWidth: "90%", maxHeight: "85vh", borderRadius: 12 }} />
         </div>
       )}
 
