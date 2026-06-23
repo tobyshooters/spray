@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "publish": "vite build && rsync -avz --delete dist/ root@ssh.arquipelago.org:/home/root/www/spray/",
+    "publish": "vite build && rsync -avz --delete dist/ root@185.193.126.243:/home/root/www/spray/",
     "lint": "eslint .",
     "preview": "vite preview"
   },

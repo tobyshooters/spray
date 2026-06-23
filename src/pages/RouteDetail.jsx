@@ -25,6 +25,7 @@ export default function RouteDetail() {
   const [attempts, setAttempts] = useState(1)
   const [notes, setNotes]       = useState("")
   const [masked, setMasked]     = useState(false)
+  const [showFelipe, setShowFelipe] = useState(false)
 
   const { data: route } = useQuery({
     queryKey: keys.route(id),
@@ -205,6 +206,7 @@ export default function RouteDetail() {
         }
       }
       queryClient.invalidateQueries({ queryKey: keys.rankings() })
+      setShowFelipe(true)
     },
   })
 
@@ -435,6 +437,24 @@ export default function RouteDetail() {
           </button>
 
         </>
+      )}
+
+      {showFelipe && (
+        <div
+          onClick={() => setShowFelipe(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 999,
+            cursor: "pointer",
+          }}
+        >
+          <img src="/felipe.webp" alt="felipe" style={{ maxWidth: "80%", maxHeight: "80vh", borderRadius: 12 }} />
+        </div>
       )}
 
     </div>
