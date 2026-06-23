@@ -77,7 +77,7 @@ const VERT_R = 5
 
 Promise.all([
   loadImage("/cp2/nova_fullres.png"),
-  fetch("/cp2/nova_holds.json").then(r => r.json()),
+  fetch("/cp2/nova_holds_precise.json").then(r => r.json()),
 ]).then(([image, data]) => {
   img   = image
   holds = data

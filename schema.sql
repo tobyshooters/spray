@@ -41,7 +41,8 @@ create table favorites (
 
 create table profiles (
   id           uuid primary key references auth.users(id),
-  display_name text not null
+  display_name text not null,
+  avatar_url   text
 );
 
 create or replace function public.handle_new_user()
@@ -136,3 +137,12 @@ create policy "ascents_update"
   to authenticated
   using (climber_id = auth.uid())
   with check (climber_id = auth.uid());
+
+-- storage: avatars bucket (public)
+-- create via dashboard, then add policy:
+
+create policy "avatar_upload"
+  on storage.objects for all
+  to authenticated
+  using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text)
+  with check (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);

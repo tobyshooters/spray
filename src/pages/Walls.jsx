@@ -63,6 +63,10 @@ export default function Walls() {
         <a href="https://chat.whatsapp.com/Gog94NtrP0nCHUzKefMyHv?mode=gi_t">whatsapp</a>
         <button className="theme-toggle" onClick={cycleTheme}>{THEME_LABELS[theme]} {theme}</button>
       </p>
+
+      <div style={{ marginTop: 12, textAlign: "center" }}>
+        <img src="/spray.png" alt="QR code" style={{ width: "100%" }} />
+      </div>
     </div>
   )
 }

@@ -16,7 +16,7 @@ export default function Rankings() {
       const [ascRes, routeRes, profRes] = await Promise.all([
         supabase.from("ascents").select("climber_id, route_id, attempts"),
         supabase.from("routes").select("id, grade"),
-        supabase.from("profiles").select("id, display_name"),
+        supabase.from("profiles").select("id, display_name, avatar_url"),
       ])
       const ascents  = ascRes.data  || []
       const routes   = routeRes.data || []
@@ -27,9 +27,9 @@ export default function Rankings() {
         gradeMap[r.id] = r.grade ?? 0
       }
 
-      const nameMap = {}
+      const profileMap = {}
       for (const p of profiles) {
-        nameMap[p.id] = p.display_name
+        profileMap[p.id] = { name: p.display_name, avatar: p.avatar_url }
       }
 
       const scores = {}
@@ -48,7 +48,8 @@ export default function Rankings() {
 
       return Object.entries(scores)
         .map(([id, { pts, byGrade }]) => ({
-          name: nameMap[id] || "anon",
+          name: profileMap[id]?.name || "anon",
+          avatar: profileMap[id]?.avatar || null,
           pts,
           byGrade,
         }))
@@ -63,15 +64,15 @@ export default function Rankings() {
       const [ascRes, routeRes, profRes] = await Promise.all([
         supabase.from("ascents").select("route_id"),
         supabase.from("routes").select("id, setter_id, grade"),
-        supabase.from("profiles").select("id, display_name"),
+        supabase.from("profiles").select("id, display_name, avatar_url"),
       ])
       const ascents  = ascRes.data  || []
       const routes   = routeRes.data || []
       const profiles = profRes.data  || []
 
-      const nameMap = {}
+      const profileMap = {}
       for (const p of profiles) {
-        nameMap[p.id] = p.display_name
+        profileMap[p.id] = { name: p.display_name, avatar: p.avatar_url }
       }
 
       const routeMap = {}
@@ -93,7 +94,8 @@ export default function Rankings() {
 
       return Object.entries(scores)
         .map(([id, { pts, byGrade }]) => ({
-          name: nameMap[id] || "anon",
+          name: profileMap[id]?.name || "anon",
+          avatar: profileMap[id]?.avatar || null,
           pts,
           byGrade,
         }))
@@ -129,19 +131,24 @@ export default function Rankings() {
 
       <ul className="ranking-list">
         {(data || []).map((r, i) => (
-          <li key={i}>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span>{i + 1}. {r.name}</span>
-              <span className="grade">
-                {r.pts} pts
-              </span>
-            </div>
-            <div style={{ fontSize: 13, color: "var(--gray)", marginTop: 4 }}>
-              {GRADES.map((label, g) =>
-                r.byGrade[g]
-                  ? <span key={g} style={{ marginRight: 8 }}>{r.byGrade[g]}x{label}</span>
-                  : null
-              )}
+          <li key={i} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            {r.avatar ? (
+              <img src={r.avatar} className="avatar" alt="" />
+            ) : (
+              <div className="avatar-placeholder avatar">{r.name[0]}</div>
+            )}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span>{i + 1}. {r.name}</span>
+                <span className="grade">{r.pts} pts</span>
+              </div>
+              <div style={{ fontSize: 13, color: "var(--gray)", marginTop: 4 }}>
+                {GRADES.map((label, g) =>
+                  r.byGrade[g]
+                    ? <span key={g} style={{ marginRight: 8 }}>{r.byGrade[g]}x{label}</span>
+                    : null
+                )}
+              </div>
             </div>
           </li>
         ))}

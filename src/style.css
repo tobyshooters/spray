@@ -268,3 +268,45 @@ a.btn {
   border-bottom: 1px solid var(--border);
   font-size: 13px;
 }
+
+.avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.avatar-lg {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  cursor: pointer;
+}
+
+.avatar-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--border);
+  color: var(--gray);
+  font-size: 13px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.avatar-placeholder.avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  font-size: 24px;
+}
+
+.avatar-placeholder.avatar-lg {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  font-size: 24px;
+  cursor: pointer;
+}
