@@ -44,7 +44,9 @@
   touch-action: manipulation;
 }
 
-html, body, #root {
+html,
+body,
+#root {
   height: 100%;
   background: var(--bg);
   color: var(--fg);
@@ -71,7 +73,9 @@ button:disabled {
   cursor: default;
 }
 
-input, textarea, select {
+input,
+textarea,
+select {
   font-family: var(--font);
   background: var(--bg);
   color: var(--fg);
@@ -81,7 +85,9 @@ input, textarea, select {
   width: 100%;
 }
 
-input:focus, textarea:focus, select:focus {
+input:focus,
+textarea:focus,
+select:focus {
   outline: 1px solid var(--fg);
 }
 
@@ -255,6 +261,52 @@ a.btn {
 .ranking-list li {
   border-bottom: 1px solid var(--border);
   padding: 12px 0;
+}
+
+.ranking-details {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.25s ease;
+}
+
+.ranking-details.open {
+  grid-template-rows: 1fr;
+}
+
+.ranking-details-content {
+  overflow: hidden;
+}
+
+.ranking-chevron {
+  display: inline-block;
+  transition: transform 0.25s ease;
+}
+
+.ranking-chevron.open {
+  transform: rotate(180deg);
+}
+
+.grade-chip {
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: var(--surface);
+  font-size: 12px;
+}
+
+.grade-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 6px;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+
+.ranking-details.open .grade-grid {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .ascent-list {

@@ -6,6 +6,12 @@ import Header from "../components/Header"
 
 const GRADES = ["V0", "V1", "V2", "V3", "V4inho", "V4", "V4ão", "V4asso"]
 
+function getTopGrades(byGrade) {
+  return Object.entries(byGrade)
+    .sort(([a], [b]) => Number(b) - Number(a))
+    .slice(0, 3)
+}
+
 export default function Rankings() {
   const [tab, setTab] = useState("climber")
 
@@ -18,9 +24,9 @@ export default function Rankings() {
         supabase.from("routes").select("id, grade"),
         supabase.from("profiles").select("id, display_name, avatar_url"),
       ])
-      const ascents  = ascRes.data  || []
-      const routes   = routeRes.data || []
-      const profiles = profRes.data  || []
+      const ascents = ascRes.data || []
+      const routes = routeRes.data || []
+      const profiles = profRes.data || []
 
       const gradeMap = {}
       for (const r of routes) {
@@ -66,9 +72,9 @@ export default function Rankings() {
         supabase.from("routes").select("id, setter_id, grade"),
         supabase.from("profiles").select("id, display_name, avatar_url"),
       ])
-      const ascents  = ascRes.data  || []
-      const routes   = routeRes.data || []
-      const profiles = profRes.data  || []
+      const ascents = ascRes.data || []
+      const routes = routeRes.data || []
+      const profiles = profRes.data || []
 
       const profileMap = {}
       for (const p of profiles) {
@@ -130,28 +136,105 @@ export default function Rankings() {
       {data?.length === 0 && <p>{tab === "climber" ? "sem sends." : "sem vias."}</p>}
 
       <ul className="ranking-list">
-        {(data || []).map((r, i) => (
-          <li key={i} style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            {r.avatar ? (
-              <img src={r.avatar} className="avatar" alt="" />
-            ) : (
-              <div className="avatar-placeholder avatar">{r.name[0]}</div>
-            )}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span>{i + 1}. {r.name}</span>
-                <span className="grade">{r.pts} pts</span>
-              </div>
-              <div style={{ fontSize: 13, color: "var(--gray)", marginTop: 4 }}>
-                {GRADES.map((label, g) =>
-                  r.byGrade[g]
-                    ? <span key={g} style={{ marginRight: 8 }}>{r.byGrade[g]}x{label}</span>
-                    : null
+        {(data || []).map((r, i) => {
+          const topGrades = getTopGrades(r.byGrade)
+          const isExpanded = expanded === i
+
+          return (
+            <li
+              key={i}
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 12,
+                padding: "12px 0",
+              }}
+            >
+              {r.avatar ? (
+                <img src={r.avatar} className="avatar" alt="" />
+              ) : (
+                <div className="avatar-placeholder avatar">
+                  {r.name[0]}
+                </div>
+              )}
+
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <strong>
+                    #{i + 1} {r.name}
+                  </strong>
+
+                  <span className="grade">
+                    {r.pts} pts
+                  </span>
+                </div>
+
+                <div
+                  style={{
+                    fontSize: 13,
+                    color: "var(--gray)",
+                    marginTop: 6,
+                  }}
+                >
+                  {topGrades.map(([grade, count], idx) => (
+                    <span key={grade}>
+                      {GRADES[Number(grade)]} ×{count}
+                      {idx < topGrades.length - 1 ? " • " : ""}
+                    </span>
+                  ))}
+                </div>
+
+                {Object.keys(r.byGrade).length > 3 && (
+                  <button
+                    type="button"
+                    onClick={() => setExpanded(isExpanded ? null : i)}
+                    style={{
+                      marginTop: 6,
+                      padding: 0,
+                      border: "none",
+                      background: "none",
+                      cursor: "pointer",
+                      fontSize: 12,
+                      color: "var(--gray)",
+                    }}
+                  >
+                    {isExpanded ? "ocultar detalhes " : "ver detalhes "}
+                    <span
+                      className={`ranking-chevron ${isExpanded ? "open" : ""}`}
+                    >
+                      ▼
+                    </span>
+                  </button>
                 )}
+
+                <div
+                  className={`ranking-details ${isExpanded ? "open" : ""}`}
+                >
+                  <div className="ranking-details-content">
+                    <div className="grade-grid">
+                      {Object.entries(r.byGrade)
+                        .sort(([a], [b]) => Number(a) - Number(b))
+                        .map(([grade, count]) => (
+                          <div
+                            key={grade}
+                            className="grade-chip"
+                          >
+                            {GRADES[Number(grade)]} ×{count}
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-          </li>
-        ))}
+            </li>
+          )
+        })}
       </ul>
     </div>
   )
