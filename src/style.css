@@ -328,14 +328,15 @@ a.btn {
 
 .border-picker {
   display: grid;
-  grid-template-columns: repeat(auto-fill, 96px);
+  grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
   gap: 6px;
+  justify-items: center;
 }
 
 .border-option {
   position: relative;
-  width: 96px;
-  height: 96px;
+  width: 76px;
+  height: 76px;
   cursor: pointer;
   border: 2px solid transparent;
   border-radius: 50%;
