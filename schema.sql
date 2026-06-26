@@ -39,10 +39,24 @@ create table favorites (
   primary key (user_id, route_id)
 );
 
+create table borders (
+  id      smallint primary key,
+  file    text not null,
+  min_pts smallint not null default 0
+);
+
+create table purchases (
+  user_id   uuid not null references auth.users(id),
+  border_id smallint not null,
+  primary key (user_id, border_id)
+);
+
 create table profiles (
   id           uuid primary key references auth.users(id),
   display_name text not null,
-  avatar_url   text
+  avatar_url   text,
+  border_id    smallint,
+  border_id_2  smallint
 );
 
 create or replace function public.handle_new_user()
@@ -64,7 +78,24 @@ alter table walls   enable row level security;
 alter table routes  enable row level security;
 alter table ascents enable row level security;
 
-alter table profiles enable row level security;
+alter table borders   enable row level security;
+alter table purchases enable row level security;
+alter table profiles  enable row level security;
+
+create policy "borders_read"
+  on borders for select
+  to authenticated, anon
+  using (true);
+
+create policy "purchases_read"
+  on purchases for select
+  to authenticated
+  using (user_id = auth.uid());
+
+create policy "purchases_insert"
+  on purchases for insert
+  to authenticated
+  with check (user_id = auth.uid());
 
 create policy "profiles_read"
   on profiles for select

@@ -254,7 +254,7 @@ a.btn {
 
 .ranking-list li {
   border-bottom: 1px solid var(--border);
-  padding: 12px 0;
+  padding: 20px 0;
 }
 
 .ascent-list {
@@ -309,4 +309,50 @@ a.btn {
   border-radius: 50%;
   font-size: 24px;
   cursor: pointer;
+}
+
+.avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.avatar-border {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 150%;
+  height: 150%;
+  pointer-events: none;
+}
+
+.border-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 96px);
+  gap: 6px;
+}
+
+.border-option {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  padding: 2px;
+  overflow: hidden;
+}
+
+.border-option.selected {
+  border-color: var(--fg);
+}
+
+.border-option.locked {
+  opacity: 0.25;
+  cursor: default;
+}
+
+.border-option img {
+  width: 100%;
+  height: 100%;
 }
