@@ -53,18 +53,19 @@ export default function RouteDetail() {
     },
   })
 
-  const { data: setter } = useQuery({
+  const { data: setterProfile } = useQuery({
     queryKey: keys.profile(route?.setter_id),
     enabled: !!route?.setter_id,
     queryFn: async () => {
       const { data } = await supabase
         .from("profiles")
-        .select("display_name")
+        .select("display_name, avatar_url, border_id, border_id_2")
         .eq("id", route.setter_id)
         .single()
-      return data?.display_name || null
+      return data
     },
   })
+  const setter = setterProfile?.display_name || null
 
   const { data: wallRoutes } = useQuery({
     queryKey: keys.wallRoutes(String(route?.wall_id)),
@@ -286,6 +287,15 @@ export default function RouteDetail() {
         </div>
         <button className="theme-toggle" onClick={() => nextId && navigate(`/routes/${nextId}`)} disabled={!nextId}>▶</button>
       </div>
+      <p style={{ marginTop: 4, marginBottom: 0, color: route.description ? "var(--fg)" : "var(--gray)" }}>
+        {route.description || "Sem descrição."}
+      </p>
+      <p style={{ marginTop: 4, marginBottom: 12, fontSize: 14, color: "var(--gray)" }}>
+        <span>{route.match ? "pode juntar" : "não pode juntar"} · </span>
+        {route.campus && <span>campus · </span>}
+        <span>volumes: {route.volumes === "any" ? "qualquer" : route.volumes === "holds only" ? "só das agarras" : route.volumes || "qualquer"}</span>
+      </p>
+
       {imageUrl && (
         <>
           <WallCanvas
@@ -296,6 +306,7 @@ export default function RouteDetail() {
             holdsMap={route.holds_map || {}}
             masked={masked}
             maskedIds={Object.keys(route.holds_map || {})}
+            cropToSelected
           >
             <button
               onClick={() => setMasked(!masked)}
@@ -307,22 +318,11 @@ export default function RouteDetail() {
         </>
       )}
 
-      <p style={{ marginTop: 24, color: route.description ? "var(--fg)" : "var(--gray)" }}>
-        {route.description || "Sem descrição."}
-      </p>
-      <p style={{ marginTop: 8, fontSize: 12, color: "var(--gray)" }}>
-        <span>{route.match ? "pode juntar" : "não pode juntar"} · </span>
-        {route.campus && <span>campus · </span>}
-        <span>volumes: {route.volumes === "any" ? "qualquer" : route.volumes === "holds only" ? "só das agarras" : route.volumes || "qualquer"}</span>
-      </p>
-
       {user && user.id === route.setter_id && (
         <button onClick={() => navigate(`/routes/${id}/edit`)} style={{ marginTop: 12 }}>
           editar via
         </button>
       )}
-
-      <hr style={{ marginTop: 24, border: "none", borderTop: "1px solid var(--gray)" }} />
 
       <h2 style={{ marginTop: 24 }}>
         sends {ascents && `(${ascents.length})`}

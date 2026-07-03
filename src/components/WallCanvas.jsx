@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useMemo } from "react"
 
 const HOLD_COLORS = {
   hand:   { fill: "rgba(0, 120, 255, 0.7)",  stroke: "#0080FF" },
@@ -71,6 +71,7 @@ export default function WallCanvas({
   masked = false,
   maskedIds = null,
   editing = false,
+  cropToSelected = false,
   children,
 }) {
   const [thumbLoaded, setThumbLoaded] = useState(false)
@@ -94,6 +95,29 @@ export default function WallCanvas({
   const HOLD_TYPE_NAMES = ["hand", "start", "finish", "feet"]
   const hasHolds = selectedIds.length > 0
 
+  const crop = useMemo(() => {
+    if (!cropToSelected || !hasHolds) return null
+    const selected = holds.filter(h => selectedIds.includes(h.id))
+    if (!selected.length) return null
+    let minX = 1, minY = 1, maxX = 0, maxY = 0
+    for (const h of selected) {
+      for (const [x, y] of h.polygon) {
+        if (x < minX) minX = x
+        if (x > maxX) maxX = x
+        if (y < minY) minY = y
+        if (y > maxY) maxY = y
+      }
+    }
+    const pad = 0.06
+    minX = Math.max(0, minX - pad)
+    minY = Math.max(0, minY - pad)
+    maxX = Math.min(1, maxX + pad)
+    maxY = Math.min(1, maxY + pad)
+    const w = maxX - minX
+    const h = maxY - minY
+    return { minX, minY, maxX, maxY, w, h }
+  }, [cropToSelected, hasHolds, holds, selectedIds])
+
   const sortedHolds = [...holds].sort((a, b) => {
     const area = (poly) => {
       let s = 0
@@ -116,85 +140,90 @@ export default function WallCanvas({
           <span>double-tap para selecionar agarra</span>
         </div>
       )}
-      <div className="wall-canvas">
-        <img
-          src={loaded || !thumbUrl ? imageUrl : thumbUrl}
-          alt="spray wall"
-          onLoad={!thumbLoaded && thumbUrl ? () => setThumbLoaded(true) : undefined}
-        />
-        {thumbLoaded && !loaded && (
+      <div className="wall-canvas" style={crop ? { overflow: "hidden" } : undefined}>
+        <div style={crop ? {
+          position: "relative",
+          width: "100%",
+          paddingBottom: `${(crop.h / crop.w) * 100}%`,
+        } : undefined}>
           <img
-            src={imageUrl}
-            alt=""
-            onLoad={() => setLoaded(true)}
-            style={{ display: "none" }}
+            src={loaded || !thumbUrl ? imageUrl : thumbUrl}
+            alt="spray wall"
+            onLoad={!thumbLoaded && thumbUrl ? () => setThumbLoaded(true) : undefined}
+            style={crop ? {
+              position: "absolute",
+              width: `${100 / crop.w}%`,
+              height: `${100 / crop.h}%`,
+              left: `${-(crop.minX / crop.w) * 100}%`,
+              top: `${-(crop.minY / crop.h) * 100}%`,
+            } : undefined}
           />
-        )}
-        <svg
-          viewBox="0 0 1000 1000"
-          preserveAspectRatio="none"
-          style={{ background: "none" }}
-        >
-          {masked && (
-            <defs>
-              <mask id="hold-mask">
-                <rect
-                  x="-1" y="-1"
-                  width="1002" height="1002"
-                  fill="white"
-                />
-                {holds
-                  .filter((h) => !maskedIds || maskedIds.includes(h.id))
-                  .map((h) => (
-                    <polygon
-                      key={h.id}
-                      points={h.polygon
-                        .map(([x, y]) => `${x * 1000},${y * 1000}`)
-                        .join(" ")}
-                      fill="black"
-                    />
-                  ))}
-              </mask>
-            </defs>
+          {thumbLoaded && !loaded && (
+            <img src={imageUrl} alt="" onLoad={() => setLoaded(true)} style={{ display: "none" }} />
           )}
+          <svg
+            viewBox={crop
+              ? `${crop.minX * 1000} ${crop.minY * 1000} ${crop.w * 1000} ${crop.h * 1000}`
+              : "0 0 1000 1000"}
+            preserveAspectRatio="none"
+            style={crop ? {
+              background: "none",
+              position: "absolute",
+              top: 0, left: 0, width: "100%", height: "100%",
+            } : { background: "none" }}
+          >
+            {masked && (
+              <defs>
+                <mask id="hold-mask">
+                  <rect x="-1" y="-1" width="1002" height="1002" fill="white" />
+                  {holds
+                    .filter((h) => !maskedIds || maskedIds.includes(h.id))
+                    .map((h) => (
+                      <polygon
+                        key={h.id}
+                        points={h.polygon
+                          .map(([x, y]) => `${x * 1000},${y * 1000}`)
+                          .join(" ")}
+                        fill="black"
+                      />
+                    ))}
+                </mask>
+              </defs>
+            )}
 
-          {masked && (
+            {masked && (
+              <rect x="-1" y="-1" width="1002" height="1002" fill="var(--bg)" mask="url(#hold-mask)" />
+            )}
+
+            {sortedHolds.filter((h) => !selectedIds.includes(h.id)).map((h) => (
+              <HoldPolygon
+                key={h.id}
+                hold={h}
+                status={holdStatus(h.id)}
+                holdType={holdsMap[h.id]}
+                onTap={onHoldTap}
+                interactive={!!onHoldTap}
+              />
+            ))}
+
             <rect
-              x="-1" y="-1"
-              width="1002" height="1002"
-              fill="var(--bg)"
-              mask="url(#hold-mask)"
+              x="-1" y="-1" width="1002" height="1002"
+              fill={hasHolds && !masked ? "rgba(255,255,255,0.5)" : "none"}
+              pointerEvents="none"
             />
-          )}
 
-          {sortedHolds.filter((h) => !selectedIds.includes(h.id)).map((h) => (
-            <HoldPolygon
-              key={h.id}
-              hold={h}
-              status={holdStatus(h.id)}
-              holdType={holdsMap[h.id]}
-              onTap={onHoldTap}
-              interactive={!!onHoldTap}
-            />
-          ))}
-
-          <rect
-            x="-1" y="-1" width="1002" height="1002"
-            fill={hasHolds && !masked ? "rgba(255,255,255,0.5)" : "none"}
-            pointerEvents="none"
-          />
-
-          {sortedHolds.filter((h) => selectedIds.includes(h.id)).map((h) => (
-            <HoldPolygon
-              key={h.id}
-              hold={h}
-              status={holdStatus(h.id)}
-              holdType={holdsMap[h.id]}
-              onTap={onHoldTap}
-              interactive={!!onHoldTap}
-            />
-          ))}
-        </svg>
+            {sortedHolds.filter((h) => selectedIds.includes(h.id)).map((h) => (
+              <HoldPolygon
+                key={h.id}
+                hold={h}
+                status={holdStatus(h.id)}
+                holdType={holdsMap[h.id]}
+                onTap={onHoldTap}
+                interactive={!!onHoldTap}
+              />
+            ))}
+          </svg>
+        </div>
       </div>
       {(onHoldTap || hasHolds || children) && (
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6, fontSize: 13 }}>
