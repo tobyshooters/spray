@@ -15,6 +15,7 @@ function gradeLabel(n) {
 }
 
 
+
 export default function WallView() {
   const { id }                  = useParams()
   const { user }                = useAuth()
@@ -45,6 +46,29 @@ export default function WallView() {
         .eq("wall_id", id)
         .order("created_at", { ascending: false })
       return data || []
+    },
+  })
+
+  const { data: wallVotedGrades } = useQuery({
+    queryKey: ["wall-voted-grades", id],
+    enabled: !!routes && routes.length > 0,
+    queryFn: async () => {
+      const ids = routes.map(r => r.id)
+      const { data } = await supabase
+        .from("ascents")
+        .select("route_id, suggested_grade")
+        .in("route_id", ids)
+        .not("suggested_grade", "is", null)
+      const map = {}
+      for (const a of (data || [])) {
+        if (!map[a.route_id]) map[a.route_id] = []
+        map[a.route_id].push(a.suggested_grade)
+      }
+      const result = {}
+      for (const [rid, votes] of Object.entries(map)) {
+        result[rid] = Math.round(votes.reduce((s, g) => s + g, 0) / votes.length)
+      }
+      return result
     },
   })
 
@@ -185,6 +209,7 @@ export default function WallView() {
                     </span>
 
                     <span style={{ textAlign: "right" }}>
+                      {wallVotedGrades?.[r.id] != null && <span style={{ fontSize: 12, color: "var(--gray)", marginRight: 4 }}>({gradeLabel(wallVotedGrades[r.id])})</span>}
                       <span className="grade">{gradeLabel(r.grade)}</span>
                       <br/>
                       <span style={{ color: "var(--gray)", fontSize: 12 }}>

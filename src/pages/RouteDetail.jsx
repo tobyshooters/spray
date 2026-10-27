@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from "react-router-dom"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "../lib/supabase"
 import { keys } from "../lib/queries"
+import { votedGrade } from "../lib/points"
 import { useAuth } from "../components/AuthContext"
 import WallCanvas from "../components/WallCanvas"
 import Header from "../components/Header"
@@ -171,6 +172,8 @@ export default function RouteDetail() {
     ? ascents.find((a) => a.climber_id === user.id) || null
     : null
 
+  const vg = votedGrade(ascents)
+
   useEffect(() => {
     if (route) setSugGrade(route.grade)
   }, [route?.id])
@@ -281,6 +284,9 @@ export default function RouteDetail() {
             {route.name}{isFav && <span style={{ fontSize: 13, marginLeft: 4 }}>⭐</span>}
           </b>
           <br/>
+          {vg != null && (
+            <span style={{ fontSize: 13, color: "var(--gray)", marginRight: 6 }}>({gradeLabel(vg)})</span>
+          )}
           <span className="grade">{gradeLabel(route.grade)}</span>
           {existingAscent && <span style={{ color: "#0c0", fontSize: 15 }}> ✔</span>}
           {setter && <span style={{ fontSize: 12 }}> por {setter}</span>}
