@@ -76,8 +76,8 @@ const MAX_UNDO   = 50
 const VERT_R = 5
 
 Promise.all([
-  loadImage("/cp2/nova_fullres.png"),
-  fetch("/cp2/nova_holds_precise.json").then(r => r.json()),
+  loadImage("/cp3/s3_montage_half.png"),
+  fetch("/cp3/holds.json").then(r => r.json()),
 ]).then(([image, data]) => {
   img   = image
   holds = data

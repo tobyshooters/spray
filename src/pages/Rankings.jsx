@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
+import { useSearchParams } from "react-router-dom"
 import { supabase } from "../lib/supabase"
 import { keys } from "../lib/queries"
 import { computeClimberScores } from "../lib/points"
@@ -10,6 +11,8 @@ const GRADES = ["V0", "V1", "V2", "V3", "V4inho", "V4", "V4ão", "V4asso"]
 
 export default function Rankings() {
   const [tab, setTab] = useState("climber")
+  const [searchParams] = useSearchParams()
+  const wallId = searchParams.get("wall")
 
   const { data: borders } = useQuery({
     queryKey: keys.borders(),
@@ -23,17 +26,20 @@ export default function Rankings() {
   })
 
   const { data: rankings } = useQuery({
-    queryKey: keys.rankings(),
+    queryKey: keys.rankings(wallId),
     staleTime: 60_000,
     queryFn: async () => {
+      const routeQuery = supabase.from("routes").select("id, grade")
+      if (wallId) routeQuery.eq("wall_id", wallId)
       const [ascRes, routeRes, profRes] = await Promise.all([
         supabase.from("ascents").select("climber_id, route_id, attempts"),
-        supabase.from("routes").select("id, grade"),
+        routeQuery,
         supabase.from("profiles").select("id, display_name, avatar_url, border_id, border_id_2"),
       ])
-      const ascents  = ascRes.data  || []
       const routes   = routeRes.data || []
       const profiles = profRes.data  || []
+      const wallRouteIds = new Set(routes.map(r => r.id))
+      const ascents = (ascRes.data || []).filter(a => wallRouteIds.has(a.route_id))
 
       const profileMap = {}
       for (const p of profiles) {
@@ -56,12 +62,14 @@ export default function Rankings() {
   })
 
   const { data: setterRankings } = useQuery({
-    queryKey: keys.setterRankings(),
+    queryKey: keys.setterRankings(wallId),
     staleTime: 60_000,
     queryFn: async () => {
+      const routeQuery = supabase.from("routes").select("id, setter_id, grade")
+      if (wallId) routeQuery.eq("wall_id", wallId)
       const [ascRes, routeRes, profRes] = await Promise.all([
         supabase.from("ascents").select("route_id"),
-        supabase.from("routes").select("id, setter_id, grade"),
+        routeQuery,
         supabase.from("profiles").select("id, display_name, avatar_url, border_id, border_id_2"),
       ])
       const ascents  = ascRes.data  || []
@@ -107,7 +115,7 @@ export default function Rankings() {
 
   return (
     <div className="page">
-      <Header back={{ to: "/walls", label: "muros" }} />
+      <Header back={wallId ? { to: `/walls/${wallId}`, label: "muro" } : { to: "/walls", label: "muros" }} wallId={wallId} />
 
       <h1>rankings</h1>
 

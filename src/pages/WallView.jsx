@@ -93,7 +93,7 @@ export default function WallView() {
 
   return (
     <div className="page">
-      <Header />
+      <Header wallId={id} />
 
       <h1>{wall?.name || "muro"}</h1>
 
