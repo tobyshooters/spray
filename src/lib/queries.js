@@ -1,0 +1,16 @@
+export const keys = {
+  walls:      ()      => ["walls"],
+  wall:       (id)    => ["walls", id],
+  holds:      (url)   => ["holds", url],
+  wallRoutes: (wallId) => ["wall-routes", wallId],
+  route:      (id)    => ["routes", id],
+  ascents:    (id)    => ["ascents", id],
+  siblings:   (wallId) => ["siblings", wallId],
+  profile:    (id)    => ["profiles", id],
+  rankings:       (wallId) => wallId ? ["rankings", wallId] : ["rankings"],
+  setterRankings: (wallId) => wallId ? ["setter-rankings", wallId] : ["setter-rankings"],
+  myWallAscents: (wallId, userId) => ["my-wall-ascents", wallId, userId],
+  myWallFavorites: (wallId, userId) => ["my-wall-favorites", wallId, userId],
+  borders: () => ["borders"],
+  purchases: (userId) => ["purchases", userId],
+}
