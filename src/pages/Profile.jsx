@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "../lib/supabase"
-import { keys } from "../lib/queries"
+import { keys, borderQuery } from "../lib/queries"
 import { computeClimberScores } from "../lib/points"
 import { useAuth } from "../components/AuthContext"
 import Header from "../components/Header"
@@ -46,17 +46,7 @@ export default function Profile() {
     },
   })
 
-  const { data: borders } = useQuery({
-    queryKey: keys.borders(),
-    staleTime: Infinity,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("borders")
-        .select("id, file, min_pts")
-        .order("min_pts")
-      return data || []
-    },
-  })
+  const { data: borders } = useQuery(borderQuery)
 
   const { data: myPts } = useQuery({
     queryKey: ["my-points", user.id],

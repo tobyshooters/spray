@@ -1,3 +1,5 @@
+import { supabase } from "./supabase"
+
 export const keys = {
   walls:      ()      => ["walls"],
   wall:       (id)    => ["walls", id],
@@ -13,4 +15,16 @@ export const keys = {
   myWallFavorites: (wallId, userId) => ["my-wall-favorites", wallId, userId],
   borders: () => ["borders"],
   purchases: (userId) => ["purchases", userId],
+}
+
+export const borderQuery = {
+  queryKey: keys.borders(),
+  staleTime: Infinity,
+  queryFn: async () => {
+    const { data } = await supabase
+      .from("borders")
+      .select("id, file, min_pts")
+      .order("min_pts")
+    return data || []
+  },
 }

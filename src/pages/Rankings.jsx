@@ -2,7 +2,7 @@ import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { useSearchParams } from "react-router-dom"
 import { supabase } from "../lib/supabase"
-import { keys } from "../lib/queries"
+import { keys, borderQuery } from "../lib/queries"
 import { computeClimberScores } from "../lib/points"
 import Header from "../components/Header"
 import Avatar from "../components/Avatar"
@@ -12,25 +12,42 @@ const GRADES = ["V0", "V1", "V2", "V3", "V4inho", "V4", "V4ão", "V4asso"]
 export default function Rankings() {
   const [tab, setTab] = useState("climber")
   const [searchParams] = useSearchParams()
-  const wallId = searchParams.get("wall")
+  const [picked, setPicked] = useState(() => {
+    const v = searchParams.get("wall")
+    return v ? Number(v) : undefined
+  })
 
-  const { data: borders } = useQuery({
-    queryKey: keys.borders(),
-    staleTime: Infinity,
+  const { data: borders } = useQuery(borderQuery)
+
+  const borderFiles = {}
+  for (const b of (borders || [])) {
+    borderFiles[b.id] = b.file
+  }
+
+  const { data: walls } = useQuery({
+    queryKey: keys.walls(),
     queryFn: async () => {
-      const { data } = await supabase.from("borders").select("id, file")
-      const map = {}
-      for (const b of (data || [])) map[b.id] = b.file
-      return map
+      const { data } = await supabase
+        .from("walls")
+        .select("id, name, created_at")
+        .order("created_at", { ascending: false })
+      return data || []
     },
   })
 
+  // a wall is a season; default to the newest, "all" for every season
+  const wallId = picked ?? walls?.[0]?.id
+
   const { data: rankings } = useQuery({
-    queryKey: keys.rankings(wallId),
+    queryKey: [...keys.rankings(), wallId],
+    enabled: !!wallId,
     staleTime: 60_000,
     queryFn: async () => {
-      const routeQuery = supabase.from("routes").select("id, grade")
-      if (wallId) routeQuery.eq("wall_id", wallId)
+      let routeQuery = supabase.from("routes").select("id, grade")
+      if (wallId !== "all") {
+        routeQuery = routeQuery.eq("wall_id", wallId)
+      }
+
       const [ascRes, routeRes, profRes] = await Promise.all([
         supabase.from("ascents").select("climber_id, route_id, attempts"),
         routeQuery,
@@ -38,8 +55,8 @@ export default function Rankings() {
       ])
       const routes   = routeRes.data || []
       const profiles = profRes.data  || []
-      const wallRouteIds = new Set(routes.map(r => r.id))
-      const ascents = (ascRes.data || []).filter(a => wallRouteIds.has(a.route_id))
+      const routeIds = new Set(routes.map((r) => r.id))
+      const ascents  = (ascRes.data || []).filter((a) => routeIds.has(a.route_id))
 
       const profileMap = {}
       for (const p of profiles) {
@@ -62,11 +79,15 @@ export default function Rankings() {
   })
 
   const { data: setterRankings } = useQuery({
-    queryKey: keys.setterRankings(wallId),
+    queryKey: [...keys.setterRankings(), wallId],
+    enabled: !!wallId,
     staleTime: 60_000,
     queryFn: async () => {
-      const routeQuery = supabase.from("routes").select("id, setter_id, grade")
-      if (wallId) routeQuery.eq("wall_id", wallId)
+      let routeQuery = supabase.from("routes").select("id, setter_id, grade")
+      if (wallId !== "all") {
+        routeQuery = routeQuery.eq("wall_id", wallId)
+      }
+
       const [ascRes, routeRes, profRes] = await Promise.all([
         supabase.from("ascents").select("route_id"),
         routeQuery,
@@ -119,6 +140,20 @@ export default function Rankings() {
 
       <h1>rankings</h1>
 
+      <select
+        value={wallId ?? ""}
+        onChange={(e) => {
+          const v = e.target.value
+          setPicked(v === "all" ? v : Number(v))
+        }}
+        style={{ marginBottom: 12 }}
+      >
+        {(walls || []).map((w) => (
+          <option key={w.id} value={w.id}>{w.name}</option>
+        ))}
+        <option value="all">todas as temporadas</option>
+      </select>
+
       <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
         <button
           className={tab === "climber" ? "" : "theme-toggle"}
@@ -140,7 +175,7 @@ export default function Rankings() {
       <ul className="ranking-list">
         {(data || []).map((r, i) => (
           <li key={i} style={{ display: "flex", alignItems: "center", gap: 20 }}>
-            <Avatar src={r.avatar} name={r.name} borderFile={borders?.[r.borderId]} borderFile2={borders?.[r.borderId2]} size={72} />
+            <Avatar src={r.avatar} name={r.name} borderFile={borderFiles[r.borderId]} borderFile2={borderFiles[r.borderId2]} size={72} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span>{i + 1}. {r.name}</span>

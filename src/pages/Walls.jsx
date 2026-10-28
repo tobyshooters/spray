@@ -49,11 +49,12 @@ export default function Walls() {
 
       <ul className="wall-list">
         {(walls || []).map((w) => (
-          <li key={w.id}>
-            <Link to={`/walls/${w.id}`} style={{ display: "flex", justifyContent: "space-between" }}>
+          <li key={w.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <Link to={`/walls/${w.id}`} style={{ display: "flex", gap: 12, alignItems: "center", flex: 1 }}>
               <span>{w.name}</span>
               <span style={{ color: "var(--gray)", fontSize: 12 }}>{w.created_at?.slice(0, 10)}</span>
             </Link>
+            <Link to={`/rankings?wall=${w.id}`} style={{ fontSize: 13, color: "var(--gray)" }}>rankings</Link>
           </li>
         ))}
       </ul>

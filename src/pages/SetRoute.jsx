@@ -49,7 +49,7 @@ export default function SetRoute() {
     setName(editRoute.name)
     setGrade(editRoute.grade)
     setHoldsMap(editRoute.holds_map || {})
-    setMatch(editRoute.match || true)
+    setMatch(editRoute.match ?? true)
     setVolumes(editRoute.volumes || "any")
     setCampus(editRoute.campus || false)
     setDescription(editRoute.description || "")
@@ -220,7 +220,7 @@ export default function SetRoute() {
       <div className="field">
         <label>pode juntar</label>
         <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, textTransform: "none", letterSpacing: 0, color: "var(--fg)" }}>
-          <input type="checkbox" checked={match} onChange={(e) => setMatch(e.target.checked)} style={{ width: "auto" }} />
+          <input type="checkbox" className="toggle" checked={match} onChange={(e) => setMatch(e.target.checked)} />
           duas mãos na mesma agarra
         </label>
       </div>
@@ -228,7 +228,7 @@ export default function SetRoute() {
       <div className="field">
         <label>campus</label>
         <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, textTransform: "none", letterSpacing: 0, color: "var(--fg)" }}>
-          <input type="checkbox" checked={campus} onChange={(e) => setCampus(e.target.checked)} style={{ width: "auto" }} />
+          <input type="checkbox" className="toggle" checked={campus} onChange={(e) => setCampus(e.target.checked)} />
           sem pés
         </label>
       </div>
