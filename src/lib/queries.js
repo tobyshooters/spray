@@ -1,23 +1,22 @@
 import { supabase } from "./supabase"
 
 export const keys = {
-  walls: () => ["walls"],
-  wall: (id) => ["walls", id],
-  holds: (url) => ["holds", url],
-  wallRoutes: (id) => ["wall-routes", id],
-  route: (id) => ["routes", id],
-  ascents: (id) => ["ascents", id],
-  siblings: (id) => ["siblings", id],
-  profile: (id) => ["profiles", id],
-  rankings: () => ["rankings"],
-  setterRankings: () => ["setter-rankings"],
+  walls:      ()      => ["walls"],
+  wall:       (id)    => ["walls", id],
+  holds:      (url)   => ["holds", url],
+  wallRoutes: (wallId) => ["wall-routes", wallId],
+  route:      (id)    => ["routes", id],
+  ascents:    (id)    => ["ascents", id],
+  siblings:   (wallId) => ["siblings", wallId],
+  profile:    (id)    => ["profiles", id],
+  rankings:       (wallId) => wallId ? ["rankings", wallId] : ["rankings"],
+  setterRankings: (wallId) => wallId ? ["setter-rankings", wallId] : ["setter-rankings"],
   myWallAscents: (wallId, userId) => ["my-wall-ascents", wallId, userId],
   myWallFavorites: (wallId, userId) => ["my-wall-favorites", wallId, userId],
   borders: () => ["borders"],
-  purchases: (id) => ["purchases", id],
+  purchases: (userId) => ["purchases", userId],
 }
 
-// one shape for ["borders"]: pages used to cache a map and an array under it
 export const borderQuery = {
   queryKey: keys.borders(),
   staleTime: Infinity,

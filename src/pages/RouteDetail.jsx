@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from "react-router-dom"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "../lib/supabase"
 import { keys } from "../lib/queries"
+import { votedGrade } from "../lib/points"
 import { useAuth } from "../components/AuthContext"
 import WallCanvas from "../components/WallCanvas"
 import Header from "../components/Header"
@@ -53,18 +54,19 @@ export default function RouteDetail() {
     },
   })
 
-  const { data: setter } = useQuery({
+  const { data: setterProfile } = useQuery({
     queryKey: keys.profile(route?.setter_id),
     enabled: !!route?.setter_id,
     queryFn: async () => {
       const { data } = await supabase
         .from("profiles")
-        .select("display_name")
+        .select("display_name, avatar_url, border_id, border_id_2")
         .eq("id", route.setter_id)
         .single()
-      return data?.display_name || null
+      return data
     },
   })
+  const setter = setterProfile?.display_name || null
 
   const { data: wallRoutes } = useQuery({
     queryKey: keys.wallRoutes(String(route?.wall_id)),
@@ -169,6 +171,8 @@ export default function RouteDetail() {
   const existingAscent = user && ascents
     ? ascents.find((a) => a.climber_id === user.id) || null
     : null
+
+  const vg = votedGrade(ascents)
 
   useEffect(() => {
     if (route) setSugGrade(route.grade)
@@ -280,12 +284,24 @@ export default function RouteDetail() {
             {route.name}{isFav && <span style={{ fontSize: 13, marginLeft: 4 }}>⭐</span>}
           </b>
           <br/>
+          {vg != null && (
+            <span style={{ fontSize: 13, color: "var(--gray)", marginRight: 6 }}>({gradeLabel(vg)})</span>
+          )}
           <span className="grade">{gradeLabel(route.grade)}</span>
           {existingAscent && <span style={{ color: "#0c0", fontSize: 15 }}> ✔</span>}
           {setter && <span style={{ fontSize: 12 }}> por {setter}</span>}
         </div>
         <button className="theme-toggle" onClick={() => nextId && navigate(`/routes/${nextId}`)} disabled={!nextId}>▶</button>
       </div>
+      <p style={{ marginTop: 4, marginBottom: 0, color: route.description ? "var(--fg)" : "var(--gray)" }}>
+        {route.description || "Sem descrição."}
+      </p>
+      <p style={{ marginTop: 4, marginBottom: 12, fontSize: 14, color: "var(--gray)" }}>
+        <span>{route.match ? "pode juntar" : "não pode juntar"} · </span>
+        {route.campus && <span>campus · </span>}
+        <span>volumes: {route.volumes === "any" ? "qualquer" : route.volumes === "holds only" ? "só das agarras" : route.volumes || "qualquer"}</span>
+      </p>
+
       {imageUrl && (
         <>
           <WallCanvas
@@ -296,6 +312,7 @@ export default function RouteDetail() {
             holdsMap={route.holds_map || {}}
             masked={masked}
             maskedIds={Object.keys(route.holds_map || {})}
+            cropToSelected
           >
             <button
               onClick={() => setMasked(!masked)}
@@ -307,22 +324,11 @@ export default function RouteDetail() {
         </>
       )}
 
-      <p style={{ marginTop: 24, color: route.description ? "var(--fg)" : "var(--gray)" }}>
-        {route.description || "Sem descrição."}
-      </p>
-      <p style={{ marginTop: 8, fontSize: 12, color: "var(--gray)" }}>
-        <span>{route.match ? "pode juntar" : "não pode juntar"} · </span>
-        {route.campus && <span>campus · </span>}
-        <span>volumes: {route.volumes === "any" ? "qualquer" : route.volumes === "holds only" ? "só das agarras" : route.volumes || "qualquer"}</span>
-      </p>
-
       {user && user.id === route.setter_id && (
         <button onClick={() => navigate(`/routes/${id}/edit`)} style={{ marginTop: 12 }}>
           editar via
         </button>
       )}
-
-      <hr style={{ marginTop: 24, border: "none", borderTop: "1px solid var(--gray)" }} />
 
       <h2 style={{ marginTop: 24 }}>
         sends {ascents && `(${ascents.length})`}

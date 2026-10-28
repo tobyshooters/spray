@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom"
 import { useAuth } from "./AuthContext"
 
-export default function Header({ back }) {
+export default function Header({ back, wallId }) {
   const { user } = useAuth()
 
   return (
@@ -13,7 +13,7 @@ export default function Header({ back }) {
         {back && <Link to={back.to}>&larr; {back.label}</Link>}
       </div>
       <div className="header-links">
-        <Link to="/rankings">rankings</Link>
+        {wallId && <Link to={`/rankings?wall=${wallId}`}>rankings</Link>}
         {user
           ? <Link to="/profile">perfil</Link>
           : <Link to="/login">entrar</Link>

@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
+import { useSearchParams } from "react-router-dom"
 import { supabase } from "../lib/supabase"
 import { keys, borderQuery } from "../lib/queries"
 import { computeClimberScores } from "../lib/points"
@@ -10,7 +11,11 @@ const GRADES = ["V0", "V1", "V2", "V3", "V4inho", "V4", "V4ão", "V4asso"]
 
 export default function Rankings() {
   const [tab, setTab] = useState("climber")
-  const [picked, setPicked] = useState()
+  const [searchParams] = useSearchParams()
+  const [picked, setPicked] = useState(() => {
+    const v = searchParams.get("wall")
+    return v ? Number(v) : undefined
+  })
 
   const { data: borders } = useQuery(borderQuery)
 
@@ -50,7 +55,6 @@ export default function Rankings() {
       ])
       const routes   = routeRes.data || []
       const profiles = profRes.data  || []
-
       const routeIds = new Set(routes.map((r) => r.id))
       const ascents  = (ascRes.data || []).filter((a) => routeIds.has(a.route_id))
 
@@ -132,7 +136,7 @@ export default function Rankings() {
 
   return (
     <div className="page">
-      <Header back={{ to: "/walls", label: "muros" }} />
+      <Header back={wallId ? { to: `/walls/${wallId}`, label: "muro" } : { to: "/walls", label: "muros" }} wallId={wallId} />
 
       <h1>rankings</h1>
 
