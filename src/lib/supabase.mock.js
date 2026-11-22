@@ -72,6 +72,13 @@ export function createMockSupabase() {
           filters.push(row => values.some(value => String(row[key]) === String(value)))
           return query
         },
+        not(key, operator, value) {
+          if (operator !== "is" || value !== null) {
+            throw new Error("The demo supports only .not(column, 'is', null)")
+          }
+          filters.push(row => row[key] != null)
+          return query
+        },
         order() { return query },
         single() { single = true; return query },
         delete() { operation = "delete"; return query },
