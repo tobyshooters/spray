@@ -231,6 +231,8 @@ export default function RouteDetail() {
       if (error) { throw error }
     },
     onSuccess: (_data, { routeId, wallId, climberId }) => {
+      queryClient.setQueryData(keys.ascents(routeId), ascents =>
+        ascents?.filter(ascent => ascent.climber_id !== climberId))
       if (routeId === id && climberId === user?.id) {
         setStars(3)
         setSugGrade(route.grade)
