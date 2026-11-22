@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import { useParams, Link, useNavigate } from "react-router-dom"
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useQuery, useMutation, useMutationState, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "../lib/supabase"
 import { keys } from "../lib/queries"
 import { votedGrade } from "../lib/points"
@@ -218,6 +218,45 @@ export default function RouteDetail() {
       }
     },
   })
+
+  const unsendMutation = useMutation({
+    mutationKey: ["unsend"],
+    mutationFn: async ({ routeId, climberId }) => {
+      const { error } = await supabase
+        .from("ascents")
+        .delete()
+        .eq("route_id", routeId)
+        .eq("climber_id", climberId)
+        .select("id")
+        .single()
+      if (error) { throw error }
+    },
+    onSuccess: (_data, { routeId, wallId, climberId }) => {
+      queryClient.setQueryData(keys.ascents(routeId), ascents =>
+        ascents?.filter(ascent => ascent.climber_id !== climberId))
+      if (routeId === id && climberId === user?.id) {
+        setStars(3)
+        setSugGrade(route.grade)
+        setAttempts(1)
+        setNotes("")
+      }
+      queryClient.invalidateQueries({ queryKey: keys.ascents(routeId) })
+      queryClient.invalidateQueries({ queryKey: keys.wallRoutes(wallId) })
+      queryClient.invalidateQueries({ queryKey: keys.myWallAscents(wallId, climberId) })
+      queryClient.invalidateQueries({ queryKey: ["wall-voted-grades", wallId] })
+      queryClient.invalidateQueries({ queryKey: keys.rankings() })
+      queryClient.invalidateQueries({ queryKey: keys.setterRankings() })
+      queryClient.invalidateQueries({ queryKey: ["my-points", climberId] })
+    },
+  })
+  const unsendForCurrent = unsendMutation.variables?.routeId === id
+    && unsendMutation.variables?.climberId === user?.id
+  const pendingUnsends = useMutationState({
+    filters: { mutationKey: ["unsend"], status: "pending" },
+    select: mutation => mutation.state.variables,
+  })
+  const unsending = pendingUnsends.some(variables =>
+    variables?.routeId === id && variables?.climberId === user?.id)
 
   const idx = siblingIds.indexOf(Number(id))
   const prevId = idx >= 0 ? siblingIds[(idx - 1 + siblingIds.length) % siblingIds.length] : null
@@ -442,10 +481,26 @@ export default function RouteDetail() {
 
           <button
             onClick={() => ascentMutation.mutate()}
-            disabled={ascentMutation.isPending}
+            disabled={ascentMutation.isPending || unsending}
           >
             {ascentMutation.isPending ? "guardando..." : existingAscent ? "editar send" : "log send"}
           </button>
+          {existingAscent && (
+            <button
+              onClick={() => unsendMutation.mutate({
+                routeId: id,
+                wallId: String(route.wall_id),
+                climberId: user.id,
+              })}
+              disabled={ascentMutation.isPending || unsending}
+              style={{ marginLeft: 12 }}
+            >
+              {unsending ? "removendo..." : "unsend"}
+            </button>
+          )}
+          {unsendForCurrent && unsendMutation.isError && (
+            <p role="alert">Não foi possível remover o send. Tente novamente.</p>
+          )}
 
         </>
       )}

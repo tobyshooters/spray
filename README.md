@@ -20,6 +20,9 @@ Supabase credentials are in your project dashboard under Settings > API. Use the
 
 Run `schema.sql` in the Supabase SQL Editor to create tables and RLS policies. Tables: `walls`, `routes`, `ascents`, `profiles`.
 
+For an existing database, run `supabase/migrations/20261121000000_allow_unsend.sql`
+in the Supabase SQL Editor to allow climbers to remove their own sends.
+
 Walls reference an image and holds JSON hosted in a public Supabase Storage bucket. Insert a wall row with the URLs after uploading.
 
 ## Preprocessing
