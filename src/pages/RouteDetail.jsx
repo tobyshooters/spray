@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import { useParams, Link, useNavigate } from "react-router-dom"
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useQuery, useMutation, useIsMutating, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "../lib/supabase"
 import { keys } from "../lib/queries"
 import { votedGrade } from "../lib/points"
@@ -220,6 +220,7 @@ export default function RouteDetail() {
   })
 
   const unsendMutation = useMutation({
+    mutationKey: ["unsend"],
     mutationFn: async ({ routeId, climberId }) => {
       const { error } = await supabase
         .from("ascents")
@@ -250,7 +251,11 @@ export default function RouteDetail() {
   })
   const unsendForCurrent = unsendMutation.variables?.routeId === id
     && unsendMutation.variables?.climberId === user?.id
-  const unsending = unsendForCurrent && unsendMutation.isPending
+  const unsending = useIsMutating({
+    mutationKey: ["unsend"],
+    predicate: mutation => mutation.state.variables?.routeId === id
+      && mutation.state.variables?.climberId === user?.id,
+  }) > 0
 
   const idx = siblingIds.indexOf(Number(id))
   const prevId = idx >= 0 ? siblingIds[(idx - 1 + siblingIds.length) % siblingIds.length] : null
