@@ -152,7 +152,7 @@ create policy "favorites_delete"
   to authenticated
   using (user_id = auth.uid());
 
--- ascents: anyone can read, authenticated can insert their own
+-- ascents: anyone can read, authenticated can manage their own
 create policy "ascents_read"
   on ascents for select
   to authenticated, anon
@@ -168,6 +168,11 @@ create policy "ascents_update"
   to authenticated
   using (climber_id = auth.uid())
   with check (climber_id = auth.uid());
+
+create policy "ascents_delete"
+  on ascents for delete
+  to authenticated
+  using (climber_id = auth.uid());
 
 -- storage: avatars bucket (public)
 -- create via dashboard, then add policy:

@@ -1,6 +1,9 @@
+import { createMockSupabase } from "./supabase.mock"
 import { createClient } from "@supabase/supabase-js"
 
 const url = import.meta.env.VITE_SUPABASE_URL
 const key = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-export const supabase = createClient(url, key)
+export const supabase = import.meta.env.MODE === "mock"
+  ? createMockSupabase()
+  : createClient(url, key)

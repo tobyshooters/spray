@@ -20,6 +20,9 @@ Supabase credentials are in your project dashboard under Settings > API. Use the
 
 Run `schema.sql` in the Supabase SQL Editor to create tables and RLS policies. Tables: `walls`, `routes`, `ascents`, `profiles`.
 
+For an existing database, run `supabase/migrations/20261121000000_allow_unsend.sql`
+in the Supabase SQL Editor to allow climbers to remove their own sends.
+
 Walls reference an image and holds JSON hosted in a public Supabase Storage bucket. Insert a wall row with the URLs after uploading.
 
 ## Preprocessing
@@ -40,3 +43,11 @@ Builds and rsyncs `dist/` to the server. The server runs Caddy with `try_files` 
 - Supabase (auth, Postgres, storage)
 - PWA via vite-plugin-pwa (cache-first for images/holds, network-first for API)
 - SAM (Segment Anything Model) for hold detection
+
+## Local mock demo
+
+Run `npm run dev:mock`, then open `http://localhost:5173/routes/482`.
+This runs the real UI with an in-memory user, wall photo, and sample send.
+Try **unsend**, then **log send** to restore it. Reloading resets the data.
+No Supabase credentials or database changes are needed in mock mode.
+The normal dev and production builds continue to use Supabase.

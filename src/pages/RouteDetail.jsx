@@ -219,6 +219,31 @@ export default function RouteDetail() {
     },
   })
 
+  const unsendMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("ascents")
+        .delete()
+        .eq("route_id", id)
+        .eq("climber_id", user.id)
+        .select("id")
+        .single()
+      if (error) { throw error }
+    },
+    onSuccess: () => {
+      setStars(3)
+      setSugGrade(route.grade)
+      setAttempts(1)
+      setNotes("")
+      queryClient.invalidateQueries({ queryKey: keys.ascents(id) })
+      queryClient.invalidateQueries({ queryKey: keys.wallRoutes(String(route.wall_id)) })
+      queryClient.invalidateQueries({ queryKey: keys.myWallAscents(String(route.wall_id), user.id) })
+      queryClient.invalidateQueries({ queryKey: keys.rankings() })
+      queryClient.invalidateQueries({ queryKey: keys.setterRankings() })
+      queryClient.invalidateQueries({ queryKey: ["my-points", user.id] })
+    },
+  })
+
   const idx = siblingIds.indexOf(Number(id))
   const prevId = idx >= 0 ? siblingIds[(idx - 1 + siblingIds.length) % siblingIds.length] : null
   const nextId = idx >= 0 ? siblingIds[(idx + 1) % siblingIds.length] : null
@@ -442,10 +467,22 @@ export default function RouteDetail() {
 
           <button
             onClick={() => ascentMutation.mutate()}
-            disabled={ascentMutation.isPending}
+            disabled={ascentMutation.isPending || unsendMutation.isPending}
           >
             {ascentMutation.isPending ? "guardando..." : existingAscent ? "editar send" : "log send"}
           </button>
+          {existingAscent && (
+            <button
+              onClick={() => unsendMutation.mutate()}
+              disabled={ascentMutation.isPending || unsendMutation.isPending}
+              style={{ marginLeft: 12 }}
+            >
+              {unsendMutation.isPending ? "removendo..." : "unsend"}
+            </button>
+          )}
+          {unsendMutation.isError && (
+            <p role="alert">Não foi possível remover o send. Tente novamente.</p>
+          )}
 
         </>
       )}
